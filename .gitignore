@@ -2,3 +2,4 @@ data/
 papers/
 .Rhistory
 __pycache__/
+.vscode/
