@@ -1,0 +1,481 @@
+---
+title: "Predicting response to anti-TNF therapies in patients with Crohn's disease"
+output:
+  bookdown::html_document2:
+    toc: true
+    toc_float: true
+    fig_caption: yes
+author: "[Maciej Piernik](https://www.linkedin.com/in/maciej-piernik-b5b65932/)"
+date: "`r Sys.Date()`"
+---
+
+```{r Default options, echo=FALSE, results="hide"}
+knitr::opts_chunk$set(echo=FALSE, message = FALSE, warning = FALSE, fig.align = "center")
+```
+
+# Introduction
+
+The aim of this study is to predict response to anti-TNF therapies in patients with Crohn's disease.
+The data was not collected with this purpose in mind, but I think it's worth checking if the gathered biomarkers have any signal associated with patient response, since this information is available here as well.
+There is a total of 66 samples in the dataset, with multiple features and 4 ways of categorizing the response (we'll get into the details later on).
+Most of the features were measured at 2 time points: right before the therapy administration (baseline) and after it theoretically should take effect (week 14).
+The patients were given one of the 2 anti-TNF therapies: infliximab or adalimumab.
+This makes the analysis a bit trickier, because even though the therapies are similar in theory, they are not identical, so it may well turn out that we'll need to build separate models for each of them (ofc I'm writing this intro somewhat retrospectively so - spoiler alert - we will).
+
+```{python Load libraries}
+import pandas as pd
+import numpy as np
+import missingno as msno
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.feature_selection import SelectKBest
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import GridSearchCV, RepeatedKFold, RepeatedStratifiedKFold, cross_val_score
+from sklearn.metrics import accuracy_score, roc_auc_score, confusion_matrix
+from sklearn.feature_selection import f_regression
+
+np.random.seed(23)
+```
+
+# Data
+
+```{python Load data, echo=FALSE, results="hide"}
+raw_data = pd.read_csv("../data/cd_data.csv", sep=';', decimal=',').set_index('No')
+
+print(raw_data.shape)
+print(raw_data.isna().sum().sum())
+```
+There is a total of 66 samples with 184 features.
+489 values are missing.
+First, let's see how many features have missing values as well as the top 15 features with the most missing values.
+```{python Missing values in features}
+print(f'Features with missing values: {raw_data.isna().any(axis=0).sum()}')
+print(raw_data.isna().sum(axis=0).sort_values(ascending=False).head(15))
+```
+As we can see, many features have some missing values and some of those features are missing most of the values.🙃
+Let's do an analogous check for the samples.
+```{python Missing values in samples}
+print(f'Samples with missing values: {raw_data.isna().any(axis=1).sum()}')
+print(raw_data.isna().sum(axis=1).sort_values(ascending=False).head(15))
+```
+Well, almost all samples have at least one missing value + even though one of the samples has 30 missing values, it's still not that bad.
+Given what we know so far, let's deal with it this way.
+Since we only have 66 samples, each one is priceless, so we'll start by dropping the features with the most missing values, say - more than 10.
+According to the previous table, we should drop 11 features and this leaves us with 173.
+```{python Drop features with too many missing values}
+data = raw_data.dropna(axis=1, thresh=len(raw_data) - 10)
+```
+Now, let's check how this affected the samples.
+```{python Missing values after dropping features}
+print(f'Samples with missing values: {data.isna().any(axis=1).sum()}')
+```
+Ok, that's waaay better.
+After this rather straightforward move, let's see what we can do about the rest of the missing data.
+Let's visualize the remaining missing values.
+```{python Missing values missingno}
+# leave only columns with missing values
+data_missing = data[data.columns[data.isna().any(axis=0)]]
+# leave only rows with missing values
+data_missing = data_missing[data_missing.isna().any(axis=1)]
+msno.matrix(data_missing)
+```
+Even though we can clearly see some patterns here, let's leave it at that for now and we'll handle the rest of the missing values later on with some imputing method 🚩.
+
+# Exploratory data analysis
+
+Most of the features come in 3 flavors: baseline, week 14 and delta (either absolute or % change).
+First of all, let's remove the duplicated 'Drug (IFX-1, ADA-2)' feature.
+Next, let's get rid of the absolute delta features and the after therapy features, since we don't want to use them for prediction.
+```{python Drop absolute delta and after therapy features, echo=FALSE, results="hide"}
+data = data.drop(['Drug (IFX-1, ADA-2)'], axis=1)
+data = data.drop(data.columns[data.columns.str.contains('after')], axis=1)
+data = data.drop(data.columns[data.columns.str.startswith('D ')], axis=1)
+
+print(data.shape)
+```
+Now we're left with 66 features, several of which are not strictly numerical.
+The plan is as follows:
+
+- We'll treat 'Sex, F=1,M=2', 'Drug, IFX=1,ADA=2', 'Smoker', '5-ASA before', 'AZA before', 'Probiotics before', 'Metro-nidasol before', 'Cipro-floxacin before', 'Steroids before', 'Ferrum before', 'Previous surgery', 'Previous anti-TNF therapy', and 'Steroid-dependency' as binary features.
+- The two features 'Localization (L1=ileum, L2=colon, L3=L1+ L2)' and 'Form (B1=luminal, B2=stricture, B3=fistula, x=perinanal)' have more than 2 categories, but we'll convert them to multiple binary features.
+Localization can be either ileum, colon or both, so we'll create 2 features: 'Localization ileum' and 'Localization colon'.
+- Form can be either luminal, stricture, fistula + each can also be perinanal, so we'll just create 4 features: 'Form luminal', 'Form stricture', 'Form fistula', and 'Form perinanal'.
+- And I'll drop the 'Other diseases' feature because... Well... I simply don't trust it 🤪.
+
+Let's do the necessary transformations, set the correct types for each feature, and plot their distributions.
+```{python Handle non-numerical features and sort out the types}
+# drop 'Other diseases'
+data = data.drop(['Other diseases'], axis=1)
+
+# Convert to binary
+data['Sex, F=1,M=2'].replace({1: 0, 2: 1}, inplace=True)
+data['Drug, IFX=1,ADA=2'].replace({1: 0, 2: 1}, inplace=True)
+data.rename(columns={"Sex, F=1,M=2": "Male", "Drug, IFX=1,ADA=2": "ADA"}, inplace=True)
+binary_features = ['Male', 'ADA', 'Smoker', '5-ASA before', 'AZA before', 'Probiotics before', 'Metro-nidasol before', 'Cipro-floxacin before', 'Steroids before', 'Ferrum before', 'Previous surgery', 'Previous anti-TNF therapy', 'Steroid-dependency']
+data = pd.get_dummies(data, columns=binary_features, drop_first=True)
+# cut the _1 from the column names which contain it
+data.rename(columns=lambda x: x[:-2] if x.endswith('_1') else x, inplace=True)
+
+# Handle 'Localization (L1=ileum, L2=colon, L3=L1+ L2)'
+localization_column = 'Localization (L1=ileum, L2=colon, L3=L1+ L2)'
+data = pd.get_dummies(data, columns=[localization_column])
+data.drop(['Localization (L1=ileum, L2=colon, L3=L1+ L2)_3'], axis=1, inplace=True)
+data.rename(columns={"Localization (L1=ileum, L2=colon, L3=L1+ L2)_1": "Localization ileum", "Localization (L1=ileum, L2=colon, L3=L1+ L2)_2": "Localization colon"}, inplace=True)
+# if both ileum and colon are 0, then it's ileum+colon, so we'll set both to 1
+data.loc[(data['Localization ileum'] == 0) & (data['Localization colon'] == 0), ['Localization ileum', 'Localization colon']] = 1
+binary_features.extend(['Localization ileum', 'Localization colon'])
+
+# Handle 'Form (B1=luminal, B2=stricture, B3=fistula, x=perinanal)'
+form_column = 'Form (B1=luminal, B2=stricture, B3=fistula, x=perinanal)'
+# first split the column into 2 columns - 'Form' and 'Form perinanal'
+data[['Form', 'Form perinanal']] = data[form_column].str.split('x', expand=True)
+# then drop the original column
+data.drop([form_column], axis=1, inplace=True)
+# then convert 'Form' to multiple binary features
+data = pd.get_dummies(data, columns=['Form'])
+# rename
+data.rename(columns={"Form_1": "Form luminal", "Form_2": "Form stricture", "Form_3": "Form fistula"}, inplace=True)
+data['Form perinanal'] = (data['Form perinanal'].isna() == False).astype(int)
+binary_features.extend(['Form luminal', 'Form stricture', 'Form fistula', 'Form perinanal'])
+
+# set the types of non-binary features to float
+non_binary_features = [col for col in data.columns if col not in binary_features]
+data[non_binary_features] = data[non_binary_features].astype(float)
+
+# remove everything after the ' before' in the column names if it exists
+data.rename(columns=lambda x: x.split(' before')[0] if ' before' in x else x, inplace=True)
+```
+
+We end up with 66 samples and 69 features distributed as follows.
+```{python Plot feature distributions}
+fig, axes = plt.subplots(23, 3, figsize=(15, 60))
+axes = axes.flatten()
+for i, col in enumerate(data.columns):
+    sns.histplot(data[col], ax=axes[i])
+    axes[i].set_title(col)
+plt.tight_layout()
+```
+Clearly, some features are very skewed, but we'll leave them as they are for now 🚩 and look at the correlations between them.
+
+```{python Plot correlations between features}
+corr = data.corr()
+mask = np.triu(np.ones_like(corr, dtype=bool))
+f, ax = plt.subplots(figsize=(11, 9))
+cmap = sns.diverging_palette(230, 20, as_cmap=True)
+plt.title('Correlation between features')
+sns.heatmap(corr, mask=mask, cmap=cmap, vmax=1, vmin=-1, center=0, square=True, linewidths=.5, cbar_kws={"shrink": .5})
+```
+OK!
+There are a few highly correlated features, but not nearly as many as I expected!
+Looking at individual correlations, we can see that the most correlated features are:
+
+- Hct - Hb: 0.97
+- AT1R-Ab -	ETAR-Ab: 0.97
+- MCV	- MCH: 0.96
+- PMN -	WBC: 0.96
+- AT1R-Ab -	VEGF-A-Ab:0.94
+- VEGF-A-Ab - ETAR-Ab: 0.91
+
+and after that we're getting below 0.9 territory.
+Hemoglibin and hematocrit are obviously correlated, as are MCV and MCH, although they are not 100% reduntant.
+The rest of these correlations form a kind of correlation triangle, where each feature is correlated with the other two, but I don't feel competent enough yet to say if any of them can be removed.
+I'll leave them as they are for now 🚩.
+
+# Response definitions
+
+According to the provided data, there are 4 different ways of defining if a given patient responded to the therapy:
+
+- a decrease in CDAI (Crohn's disease activity index) of at least 100 points,
+- a decrease in CDAI of at least 100 points coupled with normal CRP (C-reactive protein) levels (< 5 mg/L),
+- CDAI score below 150 points (this theoretically means remission),
+- CDAI score below 150 points coupled with normal CRP levels.
+
+Now, I looked up [CDAI](https://en.wikipedia.org/wiki/Crohn%27s_Disease_Activity_Index) and I have some thoughts about it.
+
+Namely...
+
+I really don't like it 🙃.
+
+It's very subjective and what's worse - it's not an actual number!
+Using this score to predict the response is probably not going to work - especially given the limited amount of data we have.
+I'd feel much more comfortable using some "harder" indicator like calprotectin or lactoferin as a response definition, but I guess we'll have to work with what we have.
+I'll add normal CRP as an additional response definition - just out of curiocity - although I realize it's probably not a good idea.
+
+We can also try to predict the actual value of CDAI after therapy, as well as the difference between the values before and after therapy.
+
+```{python Response definitions}
+y_crp = (raw_data['CRP after, mg/L'] < 5).astype(int).rename('Response CRP')
+y_response = (raw_data['CDAI, after'] - raw_data['CDAI before'] <= -100).astype(int).rename('Response CDAI')
+y_remission = (raw_data['CDAI, after'] <= 150).astype(int).rename('Remission CDAI')
+y_response_crp = (y_response & y_crp).rename('Response CDAI + CRP')
+y_remission_crp = (y_remission & y_crp).rename('Remission CDAI + CRP')
+
+crp = raw_data['CRP after, mg/L'].rename('CRP')
+cdai = raw_data['CDAI, after'].rename('CDAI')
+cdai_diff = (raw_data['CDAI, after'] - raw_data['CDAI before']).rename('CDAI diff')
+cdai_diff_norm = ((raw_data['CDAI, after'] - raw_data['CDAI before']) / raw_data['CDAI before']).rename('CDAI diff norm')
+```
+
+# Statistical analysis
+
+Let's start the statistical analysis with some simple tests to see if there are any significant differences between the groups.
+To do this, we'll need to handle the missing values first.
+I don't want to do it permanently here, because I'll need the missing values for the machine learning part, so I'll do it just for the statistical analysis by filling them with the mean value of the feature.
+
+Let's also pull one more trick out of our sleeve and add some random features to the data.
+This will allow us to see if the features we have are actually better than random at predicting the response.
+Let's add 10 random features to the data and see what happens.
+
+Now we're ready to start testing for significant differences in feature values between responders and non-responders, according to our 5 response definitions.
+We perform a series of statistical tests comparing all features within these groups.
+Each feature is first tested for normality within each group using a Shapiro-Wilk test and for equality of variances using Levene test.
+If these conditions were met - we perform a t-test, otherwise - we use a non-parametric Mann-Whitney U test.
+Regardless of the test, the null hypothesis is that there are no differences between the groups.
+I'll show only the results below $\alpha=0.05$.
+
+```{python Prepare data for tests}
+test_data = data.fillna(data.mean(axis=0), axis=0)
+for i in range(10):
+    test_data[f'_____RANDOM_{i}_____'] = np.random.rand(len(test_data))
+```
+
+```{python Tests}
+from utils import test_two_groups
+
+response_definitions = [y_response, y_response_crp, y_remission, y_remission_crp, y_crp]
+
+for y in response_definitions:
+    test_two_groups(pd.concat([test_data, y], axis=1, join='inner'), y.name)
+```
+Several observations here.
+First of all, vast majority of the performed test are Mann-Whitney U tests, which means that the data is not normally distributed.
+Not surprising, given the skewness of the features we've seen earlier + small groups.
+Secondly, there are very few significant differences between the groups.
+CRP and CDAI before treatment are not surprising, because their values after the therapy are used to define the response.
+We can also see some random features popping up, which I find a bit unsettling, but that's exactly why I added them in the first place - as a reminder of how thin the ice we're standing on is.
+
+There's also one more catch.
+
+We're performing a gazillion tests here, so we should probably adjust the p-values for multiple comparisons, but judging by the results, we can already see that it's simply going to leave us with no significant differences at all.
+
+And I think this is actually the correct outcome here.
+
+I suspect this is due to a couple of reasons:
+
+- small sample size (obvious),
+- dodgy response definitions (already ranted about this),
+- the fact that we actually have two different groups of patients here - those who received infliximab and those who received adalimumab.
+I think it's safe to say that these two groups are not identical and that they might respond differently to the therapy.
+I need to read about their respective mechanisms of action, but in the mean time, we can try to account for this by performing the tests separately for each group.
+However, that will leave us with even smaller sample sizes...
+
+So let's try the statistical analysis again, but this time we'll split the data into two groups based on the treatment and perform the tests separately for each group.
+
+```{python Tests by treatment}
+treatments = ['Infliximab', 'Adalimumab']
+
+for treatment in treatments:
+    print(f'----- {treatment} -----')
+    test_data_treatment = test_data[test_data['ADA'] == treatments.index(treatment)]
+    for y in response_definitions:
+        test_two_groups(pd.concat([test_data_treatment, y], axis=1, join='inner'), y.name)
+```
+
+Now we've obviously added another ton of tests, so the results are even less significant, but I think we can see at least some reasonable things here.
+The fact that patients who had previous anti-TNF therapy are less likely to respond probably makes sense - those are usually the harder cases.
+Still a poor biomarker though...
+Asamax is used almost in every patient, so the significance of this result probably is down to a single patient.
+The fact that we see stuff like height and random features popping up again means that we're still threading on thin ice here.
+
+I'm curious whether there is a difference in the response between the two treatments.
+Let's test that.
+
+```{python Response vs treatment}
+response_definitions = [y_response, y_response_crp, y_remission, y_remission_crp, y_crp]
+
+for y in response_definitions:
+    test_two_groups(pd.concat([test_data['ADA'], y], axis=1), 'ADA')
+```
+We see no difference in the response between the two treatments, regardless of the response definition.
+This ofc doesn't mean the groups are identical.
+Just that the rate of response is +/- the same.
+
+Before we move on to the machine learning part, let's try to look for correlations between the features and CDAI after treatment, the difference in CDAI before and after treatment, and CRP after treatment.
+
+```{python Correlations}
+response_scores = [cdai, cdai_diff, crp]
+
+for y in response_scores:
+    print(f'----- {y.name} -----')
+    print(test_data.corrwith(y).sort_values(ascending=False).head(5))
+    print(test_data.corrwith(y).sort_values(ascending=False).tail(5))
+```
+Ok - it's not surprising, that CDAI before treatment is correlated with CDAI after treatment.
+Similarly - CRP before treatment is correlated with CRP after treatment.
+We'll need to tak this into account when building the models.
+
+Now let's move on to the machine learning part.
+
+# Baseline model
+
+Let's establish a baseline model.
+I'll start with random forest, because it should show us if there's any signal in the data at all, without any hyperparameter tuning.
+We just need to add missing value imputation before the model.
+We'll use stratified 5-fold cross-validation repeated 4 times with auc roc to evaluate the model and plot the  distribution of the scores for each response definition.
+
+```{python Baseline model}
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import cross_val_score
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+
+cv = RepeatedStratifiedKFold(n_splits=5, n_repeats=4, random_state=23)
+
+baseline_pipeline = Pipeline([
+    ('imputer', SimpleImputer(strategy='mean')),
+    ('rf', RandomForestClassifier(n_estimators=100, random_state=23, n_jobs=-1))
+])
+
+results = pd.DataFrame()
+for y in response_definitions:
+    scores = cross_val_score(baseline_pipeline, data, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+    results[y.name] = scores
+    
+# plot the distribution of scores for each response definition using violin plot on a single figure
+fig, ax = plt.subplots(figsize=(10, 5))
+sns.violinplot(data=results, ax=ax, cut=0, inner='quartile')
+ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+ax.set_title('Baseline model performance')
+ax.set_ylabel('AUC ROC')
+ax.set_xlabel('Response definition')
+plt.tight_layout()
+ax.axhline(0.5, ls='--', color='black')
+plt.show()
+```
+
+Now let's build the models on the whole dataset with some additional random features and look at the feature importances.
+We'll just display the features with higher importance than the best random feature.
+
+```{python Feature importances}
+dataset = data.copy()
+for i in range(10):
+    dataset[f'_____RANDOM_{i}_____'] = np.random.rand(len(dataset))
+
+for y in response_definitions:
+    baseline_pipeline.fit(dataset, y)
+    
+    importances_df = pd.DataFrame({'feature': dataset.columns, 'importance': baseline_pipeline[1].feature_importances_})
+    importances_df.sort_values('importance', ascending=False, inplace=True)
+    
+    fig, ax = plt.subplots(figsize=(10, 4))
+    sns.barplot(data=importances_df.head(15), x='importance', y='feature', ax=ax)
+    ax.set_title(f'Feature importances for {y.name}')
+    ax.set_ylabel('Feature')
+    ax.set_xlabel('Importance')
+    plt.tight_layout()
+    plt.show()
+```
+Well - this doesn't look good.
+We have random features popping up all over the place.
+However, we also see some obvious features like CRP and CDAI before treatment, so I'd get rid of those two and try again.
+
+```{python Baseline without CRP and CDAI}
+data_no_crp_cdai = data.drop(['CRP', 'CDAI'], axis=1)
+
+results = pd.DataFrame()
+for y in response_definitions:
+    scores = cross_val_score(baseline_pipeline, data_no_crp_cdai, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+    results[y.name] = scores
+    
+# plot the distribution of scores for each response definition using violin plot on a single figure
+fig, ax = plt.subplots(figsize=(10, 5))
+sns.violinplot(data=results, ax=ax, cut=0, inner='quartile')
+ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+ax.set_title('Baseline model performance')
+ax.set_ylabel('AUC ROC')
+ax.set_xlabel('Response definition')
+plt.tight_layout()
+ax.axhline(0.5, ls='--', color='black')
+plt.show()
+
+```
+
+```{python Feature importances without CRP and CDAI before treatment}
+data_no_crp_cdai = data.drop(['CRP', 'CDAI'], axis=1)
+
+dataset = data_no_crp_cdai.copy()
+for i in range(10):
+    dataset[f'_____RANDOM_{i}_____'] = np.random.rand(len(dataset))
+
+for y in response_definitions:
+    baseline_pipeline.fit(dataset, y)
+    
+    importances_df = pd.DataFrame({'feature': dataset.columns, 'importance': baseline_pipeline[1].feature_importances_})
+    importances_df.sort_values('importance', ascending=False, inplace=True)
+    
+    fig, ax = plt.subplots(figsize=(10, 4))
+    sns.barplot(data=importances_df.head(15), x='importance', y='feature', ax=ax)
+    ax.set_title(f'Feature importances for {y.name}')
+    ax.set_ylabel('Feature')
+    ax.set_xlabel('Importance')
+    plt.tight_layout()
+    plt.show()
+```
+Well, this looks really bad...
+Only the model predicting remission is better than random, but looking at feature importance - it relies on random features 🙃
+Of course the model predicting CRP also still looks good, but we don't know with what else is CRP correlated + it's probably not a valid response definition.
+I would be great if we could get our hands on some calprotectin or lactoferrin!
+
+We need to regroup, but for now, let's also try predicting the CDAI score after treatment as well as the difference between CDAI before and after treatment.
+I would also add another definition of difference, which is the difference between CDAI before and after treatment divided by CDAI before treatment, i.e., the relative change.
+We'll also add some random features to the dataset.
+
+```{python Predicting CDAI after treatment using regression}
+data_no_crp_cdai = data.drop(['CRP', 'CDAI'], axis=1)
+
+response_definitions = [cdai, cdai_diff, cdai_diff_norm, crp]
+
+dataset = data_no_crp_cdai.copy()
+for i in range(10):
+    dataset[f'_____RANDOM_{i}_____'] = np.random.rand(len(dataset))
+    
+cv = RepeatedKFold(n_splits=5, n_repeats=4, random_state=23)
+
+pipeline = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='median')),
+    ('model', RandomForestRegressor(n_estimators=1000)),
+])
+
+results = pd.DataFrame()
+for y in response_definitions:
+    scores = cross_val_score(pipeline, dataset, y, scoring='neg_mean_absolute_error', cv=cv, n_jobs=-1)
+    results[y.name] = scores
+    
+
+# plot the distribution of scores for each response definition using violin plot on a single figure
+fig, ax = plt.subplots(figsize=(10, 5))
+sns.violinplot(data=results, ax=ax, cut=0, inner='quartile')
+ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+ax.set_title('Baseline regression model performance')
+ax.set_ylabel('MAE')
+ax.set_xlabel('Response definition')
+plt.tight_layout()
+plt.show()
+```
+
+
+# Model selection pipeline
+
+# Model evaluation
+
+# Conclusions
+
+
+
+
+
