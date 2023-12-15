@@ -4,7 +4,7 @@ import pandas as pd
 from pyensembl import EnsemblRelease
 
 
-class GPL1708():
+class GPL6244():
     def process(self, dataset):
         logging.info(f'Processing dataset {dataset.id}')
 
