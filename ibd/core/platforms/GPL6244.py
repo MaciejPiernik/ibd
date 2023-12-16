@@ -1,7 +1,8 @@
 import logging
 
 import pandas as pd
-from pyensembl import EnsemblRelease
+
+from ibd.core.ensembl.mapping import locations_to_genes
 
 
 class GPL6244():
@@ -11,7 +12,10 @@ class GPL6244():
         expr_matrix = dataset.raw_dataset.pivot_samples('VALUE')
         expr_matrix_t = expr_matrix.T
         expr_df = pd.DataFrame(expr_matrix_t)
-        transcript_ids = dataset.raw_dataset.gpls[next(iter(dataset.raw_dataset.gpls))].table.set_index('ID').ENSEMBL_ID.dropna()
-        expr_df = pd.concat([expr_df.transpose(), transcript_ids], axis=1, join='inner').set_index('ENSEMBL_ID').transpose()
+        locations = dataset.raw_dataset.gpls[next(iter(dataset.raw_dataset.gpls))].table.set_index('ID').SPOT_ID
+
+        genes = locations_to_genes(locations, dataset.ensembl_release)
+
+        expr_df = pd.concat([expr_df.transpose(), genes], axis=1, join='inner').set_index('ENSEMBL_ID').transpose()
 
         return expr_df

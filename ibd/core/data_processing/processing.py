@@ -1,18 +1,15 @@
 import logging
 
-from ibd.core.data_processing.loaders import load_raw_dataset
-from ibd.core.platforms.utils import get_platform
-
 
 def process_all(datasets):
     for dataset in datasets:
         process(dataset)
 
 
-def process(dataset_id):
-    logging.info('Processing dataset {}'.format(dataset_id))
+def process(dataset):
+    logging.info('Processing dataset {}'.format(dataset.id))
 
-    dataset = load_raw_dataset(dataset_id)
+    dataset.load_raw_data()
 
     dataset.process()
 
