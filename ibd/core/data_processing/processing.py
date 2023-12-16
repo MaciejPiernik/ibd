@@ -1,7 +1,7 @@
 import logging
 
 from ibd.core.data_processing.loaders import load_raw_dataset
-from ibd.core.platforms.platforms import get_platform
+from ibd.core.platforms.utils import get_platform
 
 
 def process_all(datasets):

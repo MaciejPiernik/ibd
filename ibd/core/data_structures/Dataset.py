@@ -2,7 +2,7 @@ import pandas as pd
 
 import logging
 
-from ibd.core.platforms.platforms import get_platform
+from ibd.core.platforms.utils import get_platform
 
 class Dataset:
     id: str
