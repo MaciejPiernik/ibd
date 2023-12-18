@@ -5,6 +5,8 @@ import pandas as pd
 
 from ibd.core.platforms.utils import get_platform
 
+GEOparse.logger.set_verbosity("ERROR")
+
 
 class Dataset:
     id: str

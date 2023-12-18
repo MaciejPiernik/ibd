@@ -10,8 +10,11 @@ def locations_to_genes(locations, ensembl_release):
     genes = []
 
     for loc in tqdm(locations, total=len(locations)):
-        if pd.isnull(loc) or not loc.startswith('chr'):
+        if pd.isnull(loc):
             genes.append(None)
+            continue
+        elif loc == 'control':
+            genes.append(loc)
             continue
 
         loc_split = loc.split(':')
