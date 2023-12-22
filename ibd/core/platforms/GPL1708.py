@@ -1,21 +1,8 @@
-import logging
-
-import pandas as pd
-
-from ibd.core.ensembl.mapping import locations_to_genes
+import numpy as np
 
 
 class GPL1708():
-    def process(self, dataset):
-        logging.info(f'Processing dataset {dataset.id}')
+    def get_entrez_id_lists(self, locations):
+        ids = locations.GENE.map(lambda x: [str(int(x))] if not np.isnan(x) else [None])
 
-        expr_matrix = dataset.raw_dataset.pivot_samples('VALUE')
-        expr_matrix_t = expr_matrix.T
-        expr_df = pd.DataFrame(expr_matrix_t)
-        locations = dataset.raw_dataset.gpls[next(iter(dataset.raw_dataset.gpls))].table.set_index('ID').CHROMOSOMAL_LOCATION
-
-        genes = locations_to_genes(locations, dataset.ensembl_release)
-
-        expr_df = pd.concat([expr_df.transpose(), genes], axis=1, join='inner').set_index('ENSEMBL_ID').transpose()
-
-        return expr_df
+        return ids

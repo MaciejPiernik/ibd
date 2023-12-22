@@ -11,3 +11,4 @@ def get_platform(platform_id):
         return GPL6244()
     else:
         raise Exception('Unknown platform {}'.format(platform_id))
+    

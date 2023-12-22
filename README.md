@@ -11,3 +11,7 @@ I've found an absolute ****load of data just lying around the Internet.
 They're all from different studies, different labs, different countries, different years, different technologies, different everything, so it should be fun to try to make sense of it all.
 But so far, I've identified nearly 1200 (sic!) samples of expression data from mucosal biopsies of IBD patients.
 Some of them with response information so I think it's reeeeally worth a shot!
+
+## Current state of affairs
+Adding pipelines to the platform.
+Currently have GPL1708, GPL6244, and GPL570, which covers the majority of the data I've found.

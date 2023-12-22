@@ -1,21 +1,18 @@
-import logging
-
-import pandas as pd
-
-from ibd.core.ensembl.mapping import locations_to_genes
-
 
 class GPL6244():
-    def process(self, dataset):
-        logging.info(f'Processing dataset {dataset.id}')
+    def get_entrez_id_lists(self, locations):
+        ids = locations.gene_assignment.map(self._gene_assignment_row_to_ids)
 
-        expr_matrix = dataset.raw_dataset.pivot_samples('VALUE')
-        expr_matrix_t = expr_matrix.T
-        expr_df = pd.DataFrame(expr_matrix_t)
-        locations = dataset.raw_dataset.gpls[next(iter(dataset.raw_dataset.gpls))].table.set_index('ID').SPOT_ID
+        return ids
 
-        genes = locations_to_genes(locations, dataset.ensembl_release)
+    def _gene_assignment_row_to_ids(self, row):
+        gene_assignments = str(row).split(' /// ')
 
-        expr_df = pd.concat([expr_df.transpose(), genes], axis=1, join='inner').set_index('ENSEMBL_ID').transpose()
-
-        return expr_df
+        ids = []
+        for gene_assignment in gene_assignments:
+            gene_assignment_entries = gene_assignment.split(' // ')
+            if len(gene_assignment_entries) == 5:
+                if gene_assignment_entries[4].isdigit():
+                    ids.append(gene_assignment_entries[4])
+        
+        return list(set(ids))

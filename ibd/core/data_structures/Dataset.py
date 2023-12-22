@@ -3,7 +3,7 @@ import logging
 
 import pandas as pd
 
-from ibd.core.platforms.utils import get_platform
+from ibd.core.platforms.Platform import Platform
 
 GEOparse.logger.set_verbosity("ERROR")
 
@@ -26,14 +26,14 @@ class Dataset:
         self.raw_dataset = gse
 
     def process(self):
-        platform = get_platform(self.platform_id)
+        platform = Platform(self.platform_id)
 
         self.data = platform.process(self)
 
     def persist(self):
         logging.info(f'Saving dataset {self.id}')
 
-        self.data.to_csv(f'./db/{self.id}.csv', index=False)
+        self.data.to_parquet(f'./db/{self.id}.parquet')
 
     @property
     def platform_id(self):

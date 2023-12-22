@@ -1,12 +1,6 @@
-import logging
-
-import pandas as pd
-
-from ibd.core.ensembl.mapping import locations_to_genes
-
 
 class GPL570():
-    def process(self, dataset):
-        logging.info(f'Processing dataset {dataset.id}')
+    def get_entrez_id_lists(self, locations):
+        ids = locations.ENTREZ_GENE_ID.map(lambda x: str(x).split(' /// '))
 
-        raise NotImplementedError('GPL570 is not implemented yet')
+        return ids
