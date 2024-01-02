@@ -1,5 +1,7 @@
 import logging
 
+from ibd.core.data_structures.Dataset import Dataset
+
 
 def process_all(datasets):
     for dataset in datasets:
@@ -9,7 +11,7 @@ def process_all(datasets):
             logging.error('Error processing dataset {}: {}'.format(dataset.id, e))
 
 
-def process(dataset):
+def process(dataset: Dataset):
     logging.info('Processing dataset {}'.format(dataset.id))
 
     dataset.load_raw_data()

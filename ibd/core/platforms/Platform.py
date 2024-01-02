@@ -36,7 +36,7 @@ class Platform:
     
 
     def get_platform(self, platform_id):
-        if platform_id == 'GPL570':
+        if platform_id in ['GPL570', 'GPL17996']:
             return GPL570()
         elif platform_id == 'GPL1708':
             return GPL1708()
