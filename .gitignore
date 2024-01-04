@@ -4,3 +4,4 @@ papers/
 __pycache__/
 .vscode/
 db/
+.DS_Store
