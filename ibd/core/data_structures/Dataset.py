@@ -11,6 +11,7 @@ GEOparse.logger.set_verbosity("ERROR")
 class Dataset:
     id: str
     raw_dataset: pd.DataFrame
+    metadata: pd.DataFrame
     data: pd.DataFrame
     ensembl_release: int
 
@@ -24,6 +25,7 @@ class Dataset:
         gse = GEOparse.get_GEO(geo=self.id, destdir=cache_dir)
         
         self.raw_dataset = gse
+        self.metadata = gse.phenotype_data
 
     def process(self):
         platform = Platform(self.platform_id)
@@ -34,6 +36,7 @@ class Dataset:
         logging.info(f'Saving dataset {self.id}')
 
         self.data.to_parquet(f'./db/{self.id}.parquet')
+        self.metadata.to_parquet(f'./db/{self.id}_metadata.parquet')
 
     @property
     def platform_id(self):
