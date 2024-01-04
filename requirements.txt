@@ -16,3 +16,4 @@ GEOparse==2.0.3
 click==8.1.7
 pyyaml==6.0.1
 pyensembl==2.2.9
+fastparquet==2023.10.1
