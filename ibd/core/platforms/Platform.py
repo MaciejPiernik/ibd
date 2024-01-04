@@ -1,6 +1,7 @@
 import logging
 
 import pandas as pd
+import numpy as np
 
 from ibd.core.platforms.GPL1708 import GPL1708
 from ibd.core.platforms.GPL570 import GPL570
@@ -18,7 +19,7 @@ class Platform:
 
         expr_matrix = dataset.raw_dataset.pivot_samples('VALUE')
         expr_matrix_t = expr_matrix.T
-        expr_df = pd.DataFrame(expr_matrix_t)
+        expr_df = pd.DataFrame(expr_matrix_t).rename_axis('ID', axis=1)
 
         locations = dataset.raw_dataset.gpls[next(iter(dataset.raw_dataset.gpls))].table.set_index('ID')
 
@@ -27,6 +28,7 @@ class Platform:
         ids = id_lists.apply(pd.Series, 1).stack()
         ids = ids.reset_index(level=1, drop=True)
         ids = ids.rename('ENTREZ_ID')
+        ids = ids.map(lambda x: str(int(float(x))) if not np.isnan(float(x)) else None)
 
         expr_df = expr_df.transpose().join(ids, how='inner').set_index(ids.name).transpose()
 
