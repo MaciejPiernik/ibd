@@ -43,6 +43,7 @@ class Dataset:
 
 
     def process_metadata(self):
+        logging.info(f'Processing metadata for dataset {self.id}')
         processor = self.get_metadata_processor()
 
         return processor.process(self.raw_dataset.phenotype_data)
