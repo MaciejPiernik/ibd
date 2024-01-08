@@ -162,3 +162,67 @@ class GSE36807_MetadataProcessor:
         result['time_of_biopsy'] = None
 
         return result
+    
+class GSE22619_MetadataProcessor:
+    def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
+        PATIENT_ID = 'title'
+        DISEASE = 'title'
+        TREATMENT = None
+        RESPONSE = None
+        TIME_OF_BIOPSY = None
+
+        PATIENT_ID_MAP = {
+            'Healthy individual of twinpair': '1',
+            'Diseased individual (ulcerative colitis) of twinpair': '2',
+        }
+
+        DISEASE_MAP = {
+            'Healthy individual of twinpair': 'Ctrl',
+            'Diseased individual (ulcerative colitis) of twinpair': 'UC',
+        }
+
+        result = pd.DataFrame()
+
+        result['patient_id'] = metadata[PATIENT_ID].map(lambda x: f"{x.split(' #')[1]}_{PATIENT_ID_MAP[x.split(' #')[0]]}")
+        result['disease'] = metadata[DISEASE].map(lambda x: DISEASE_MAP[x.split(' #')[0]])
+        result['treatment'] = None
+        result['response'] = None
+        result['time_of_biopsy'] = None
+
+        return result
+    
+class GSE9452_MetadataProcessor:
+    def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
+        PATIENT_ID = 'title'
+        DISEASE = [c for c in metadata.columns if c.startswith('characteristics')]
+        TREATMENT = None
+        RESPONSE = None
+        TIME_OF_BIOPSY = None
+
+        result = pd.DataFrame()
+
+        result['patient_id'] = metadata[PATIENT_ID].map(lambda x: x.split('_')[-1])
+        result['disease'] = metadata.apply(lambda x: 'UC' if 'Ulcerative colitis' in x[DISEASE][x[DISEASE].isna() == False].index[0] else 'Ctrl', axis=1)
+        result['treatment'] = None
+        result['response'] = None
+        result['time_of_biopsy'] = None
+
+        return result
+    
+class GSE72780_MetadataProcessor:
+    def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
+        PATIENT_ID = None
+        DISEASE = 'source_name_ch1'
+        TREATMENT = None
+        RESPONSE = None
+        TIME_OF_BIOPSY = None
+
+        result = pd.DataFrame()
+
+        result['disease'] = metadata[DISEASE].map(lambda x: 'CD' if '(CD)' in x else 'Ctrl')
+        result['patient_id'] = range(len(result))
+        result['treatment'] = None
+        result['response'] = None
+        result['time_of_biopsy'] = None
+
+        return result
