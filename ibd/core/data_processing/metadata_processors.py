@@ -8,6 +8,8 @@ DISEASE_MAP = {
     'UC': 'UC',
     'ulcerative colitis': "UC",
 
+    'Normal': 'Ctrl',
+    'Control': 'Ctrl',
     'control': "Ctrl",
 }
 
@@ -20,17 +22,15 @@ class GSE11223_MetadataProcessor:
         RESPONSE = None
         TIME_OF_BIOPSY = None
 
-        metadata = metadata[[PATIENT_ID, DISEASE]]
-        metadata['treatment'] = None
-        metadata['response'] = None
-        metadata['time_of_biopsy'] = None
-        
-        metadata = metadata.rename(columns={
-            PATIENT_ID: 'patient_id',
-            DISEASE: 'disease'
-        })
+        result = pd.DataFrame()
 
-        return metadata
+        result['patient_id'] = metadata[PATIENT_ID]
+        result['disease'] = metadata[DISEASE].map(DISEASE_MAP)
+        result['treatment'] = None
+        result['response'] = None
+        result['time_of_biopsy'] = None
+
+        return result
 
 class GSE75214_MetadataProcessor:
     def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
@@ -114,7 +114,7 @@ class GSE16879_MetadataProcessor:
         result = pd.DataFrame()
 
         result['patient_id'] = metadata[PATIENT_ID].map(lambda x: x.split('_')[0])
-        result['disease'] = metadata[DISEASE]
+        result['disease'] = metadata[DISEASE].map(DISEASE_MAP)
         result['treatment'] = metadata[TREATMENT].map(lambda x: 'IFX' if len(x.split('_')) == 2 else None)
         result['response'] = metadata[RESPONSE].map(lambda x: 'Yes' if x == 'Yes' else ('No' if x == 'No' else None))
         result['time_of_biopsy'] = metadata[TIME_OF_BIOPSY].map(TIME_OF_BIOPSY_MAP)
@@ -131,8 +131,8 @@ class GSE52746_MetadataProcessor:
 
         result = pd.DataFrame()
 
-        result['patient_id'] = metadata[PATIENT_ID]
-        result['disease'] = metadata[DISEASE].map(lambda x: 'CD' if 'CD' in x else ('Ctrl' if 'Control' in x else None))
+        result['patient_id'] = metadata.apply(lambda x: x['title'].split('(')[1][:-1] if 'control' in x['title'] else x[PATIENT_ID], axis=1)
+        result['disease'] = metadata[DISEASE].map(lambda x: 'CD' if 'CD' in x else 'Ctrl')
         result['treatment'] = metadata[TREATMENT].map(lambda x: None if 'control' in x else 'anti-TNF')
         result['response'] = metadata[RESPONSE].map(lambda x: 'Yes' if (' with ' in x and 'Inactive' in x) else ('No' if (' with ' in x and 'Active' in x) else None))
         result['time_of_biopsy'] = metadata[TIME_OF_BIOPSY].map(lambda x: 'Before' if 'without' in x else ('After' if ' with ' in x else None))
