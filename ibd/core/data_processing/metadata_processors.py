@@ -62,16 +62,13 @@ class GSE73661_MetadataProcessor:
         RESPONSE = 'title'
         TIME_OF_BIOPSY = 'characteristics_ch1.1.week (w)'
 
-        result = metadata[[PATIENT_ID, TREATMENT, TIME_OF_BIOPSY]]
+        result = pd.DataFrame()
 
-        result = result.rename(columns={
-            PATIENT_ID: 'patient_id',
-            TREATMENT: 'treatment',
-            TIME_OF_BIOPSY: 'time_of_biopsy'
-        })
-
+        result['patient_id'] = metadata[PATIENT_ID]
         result['disease'] = metadata[DISEASE].map(lambda x: 'UC' if 'UC' in x else 'Ctrl' if 'Control' in x else None)
+        result['treatment'] = metadata[TREATMENT].map(lambda x: None if x == 'CO' else x)
         result['response'] = metadata[RESPONSE].map(lambda x: 'No' if 'NR' in x.replace(' ', '_').split('_') else ('Yes' if 'R' in x.replace(' ', '_').split('_') else ('Other' if 'other' in x.replace(' ', '_').split('_') else None)))
+        result['time_of_biopsy'] = metadata[TIME_OF_BIOPSY].map(lambda x: None if x == 'CO' else x)
 
         return result
 
