@@ -13,5 +13,11 @@ But so far, I've identified nearly 1200 (sic!) samples of expression data from m
 Some of them with response information so I think it's reeeeally worth a shot!
 
 ## Current state of affairs
-Adding pipelines to the platform.
-Currently have GPL1708, GPL6244, and GPL570, which covers the majority of the data I've found.
+We have 3 platforms covering 90% of the samples and metadata processing for all these datasets.
+The samples are normalized between datasets, so they can be analyzed together.
+Tested the first model for infliximab prediction with ~0.75 AUC ROC.
+Next steps:
+- gene importance analysis,
+- further modeling,
+- semi-supervised learning,
+- going back and improving the whole pipeline.
