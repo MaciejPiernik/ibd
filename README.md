@@ -15,9 +15,10 @@ Some of them with response information so I think it's reeeeally worth a shot!
 ## Current state of affairs
 We have 3 platforms covering 90% of the samples and metadata processing for all these datasets.
 The samples are normalized between datasets, so they can be analyzed together.
-Tested the first model for infliximab prediction with ~0.75 AUC ROC.
+Tested the first, very simple model for infliximab prediction with ~0.75 AUC ROC.
+It selected 5 important features ('DCBLD1', 'IL13RA2', 'CSGALNACT2', 'WNK2', 'SNAPC1'), out of which IL13RA2 and WNK2 have been identified in a previous study which uses parts of this data, so this confirms to some extent that our platform works!
+
 Next steps:
-- gene importance analysis,
 - further modeling,
 - semi-supervised learning,
 - going back and improving the whole pipeline.

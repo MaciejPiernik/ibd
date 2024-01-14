@@ -8,7 +8,7 @@ Pillow==10.1.0
 scikit-learn==1.3.2
 scipy==1.11.4
 seaborn==0.13.0
-shap==0.43.0
+shap==0.42.1
 tqdm==4.66.1
 tzdata==2023.3
 umap-learn==0.5.5
@@ -18,3 +18,4 @@ pyyaml==6.0.1
 pyensembl==2.2.9
 fastparquet==2023.10.1
 combat==0.3.3
+probatus-2.1.1
