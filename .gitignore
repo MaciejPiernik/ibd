@@ -2,8 +2,6 @@ data/
 papers/
 .Rhistory
 __pycache__/
-.vscode/
+/.vscode/
 db/
 .DS_Store
-
-!data/DAQ.csv
