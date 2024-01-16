@@ -5,3 +5,4 @@ __pycache__/
 /.vscode/
 db/
 .DS_Store
+ibd/notebooks/*.csv
