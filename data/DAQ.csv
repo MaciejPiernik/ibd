@@ -1,0 +1,19 @@
+Accession number;Platform;Ensembl release;No samples;Description
+GSE11223;GPL1708;54;202;UC vs normal, various parts of colon inflamed/non-inflamed
+GSE75214;GPL6244;75;194;CD, UC, control
+GSE73661;GPL6244;75;178;UC, vedolizumab, Infliximab
+GSE59071;GPL6244;75;116;CD, UC, --- DUPLICATED IN GSE75214 ---
+GSE23597;GPL570;;113;UC, Infliximab
+GSE16879;GPL570;;73;CD, UC, control, Infliximab
+GSE52746;GPL17996;;39;CD, control, Infliximab
+GSE6731;GPL8300;;36;CD, UC
+GSE36807;GPL570;;35;CD, UC, control
+GSE14580;GPL570;;30;UC, Infliximab, --- DUPLICATED IN GSE16879 ---
+GSE22619;GPL570;;30;UC, twins
+GSE9452;GPL570;;26;UC, inflamed vs non-inflamed
+GSE12251;GPL570;;23;UC, Infliximab, --- DUPLICATED IN GSE23597 ---
+GSE1152;GPL96;;12;CD, UC, control
+GSE72780;GPL570;;9;CD, inflamed vs noninflamed
+GSE111761;GPL13497;;6;CD, anti-TNF therapy, 3 responders, 3 non-responders
+GSE1141;GPL96;;6;CD, Ileum vs Colon, HG-U133A
+GSE1142;GPL97;;6;CD, Ileum vs Colon, HG-U133B,  --- DUPLICATED IN GSE1141 ---

@@ -1,4 +1,5 @@
-data/
+geo_cache/
+geo_datasets/
 papers/
 .Rhistory
 __pycache__/
@@ -6,3 +7,5 @@ __pycache__/
 db/
 .DS_Store
 ibd/notebooks/*.csv
+data/Baza danych_CD.xlsx
+data/cd_data.csv

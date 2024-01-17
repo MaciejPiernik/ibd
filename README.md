@@ -1,11 +1,10 @@
 # IBD
 
 ## Intro
-In this repository, I'm working on solving Inflammatory Bowel Diseases (IBD).
+In this repository, I'm working on figuring out Inflammatory Bowel Diseases (IBD).
 I know - very modest...
 I do realize that the problem is very complex and requires several breakthroughs in immunology, microbiology, drug design, diagnostics, and probably many other fields.
-But I still can't wrap my head around the fact that currently patients are treated with a trial-and-error approach, and that there is no way to predict whether a patient will respond to a given therapy.
-That's why, we'll start with this problem.
+But I still can't wrap my head around the fact that currently patients are treated with a trial-and-error approach, and that there is no way to predict whether a patient will respond to a given therapy. That's why, we'll start with this problem.
 **The result should be a diagnostic test used by clinicians to assign patients to the right therapy.**
 
 I've found an absolute ****load of data just lying around the Internet.
@@ -27,6 +26,11 @@ You can run it like this:
 python -m ibd run-pipeline -d GSE11223,GSE75214,GSE6731
 ```
 This will download the data from the 3 datasets, process it, and save the results in the ```db``` directory.
+
+You can also run the pipeline for all datasets in the database (currently in ```data/DAQ.csv``` file) by omitting the ```-d``` flag.
+```
+python -m ibd run-pipeline
+`````
 
 In order for it to work, there needs to be:
 - a class to process the expression data for a given platform (currently supported platforms are: ```GPL1708```, ```GPL6244```, ```GPL570```, and ```GPL17996```, which cover 90% of the samples),
