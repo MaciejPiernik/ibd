@@ -1,5 +1,6 @@
 # IBD
 
+## Intro
 In this repository, I'm working on solving Inflammatory Bowel Diseases (IBD).
 I know - very modest...
 I do realize that the problem is very complex and requires several breakthroughs in immunology, microbiology, drug design, diagnostics, and probably many other fields.
@@ -12,13 +13,34 @@ They're all from different studies, different labs, different countries, differe
 But so far, I've collected nearly 1200 (sic!) samples of expression data from mucosal biopsies of IBD patients.
 Some of them with response information so I think it's reeeeally worth a shot!
 
+## Setup
+
+After downloading the repo, first install the dependencies.
+```
+pip install -r requirements
+```
+
+Then, you can install the package (```pip install .```), or run it directly from the repo.
+The package is runnable and currently serves one main purpose - to download and process the data.
+You can run it like this:
+```
+python -m ibd run-pipeline -d GSE11223,GSE75214,GSE6731
+```
+This will download the data from the 3 datasets, process it, and save the results in the ```db``` directory.
+
+In order for it to work, there needs to be:
+- a class to process the expression data for a given platform (currently supported platforms are: ```GPL1708```, ```GPL6244```, ```GPL570```, and ```GPL17996```, which cover 90% of the samples),
+- a class to process the metadata, which is unfortunately dataset specific.
+
+The package also contains a mock for runnig an experiment, but that's for later.
+For now, I'll conduct all of the experiments in notebooks, and go back to this only after improving the whole data processing pipeline, which is a loooong way to go.
+
 ## Current state of affairs
-We have 3 platforms covering 90% of the samples and metadata processing for all these datasets.
-The samples are normalized between datasets, so they can be analyzed together.
-Tested the first, very simple model for infliximab prediction with ~0.75 AUC ROC.
-It selected 5 important features ('DCBLD1', 'IL13RA2', 'CSGALNACT2', 'WNK2', 'SNAPC1'), out of which IL13RA2 and WNK2 have been identified in a previous study which uses parts of this data, so this confirms to some extent that our platform works!
+I have implemented a comprehensive modeling pipeline in the ```experiment_playground.ipynb``` notebook.
+The output model predicts Infliximab response in patients with CD and UC with 0.78 cross-validation AUC.
+It identified 5 most importang genes, all of which have been shown to be involved in IBD pathogenesis: NAT2, A1BG, AKT3, ADA, and CDH2.
 
 Next steps:
-- further modeling,
+- checking how the model performs on healthy controls,
 - semi-supervised learning,
 - going back and improving the whole pipeline.
