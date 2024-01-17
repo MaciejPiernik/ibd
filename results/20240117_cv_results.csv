@@ -1,0 +1,36 @@
+train_auc,test_auc,best_model
+0.828374655647383,0.7959183673469388,"Pipeline(steps=[('variance_threshold', VarianceThreshold(threshold=0)),
+                ('scaler', None), ('dim_reduction', SelectKBest(k='all')),
+                ('classifier', LogisticRegression(C=10, max_iter=1000))])"
+0.7587809917355371,0.7193877551020409,"Pipeline(steps=[('variance_threshold', VarianceThreshold(threshold=0)),
+                ('scaler', KBinsDiscretizer(encode='ordinal', n_bins=3)),
+                ('dim_reduction', SelectKBest(k=7)),
+                ('classifier', GaussianNB())])"
+0.7986019283746557,0.7244897959183674,"Pipeline(steps=[('variance_threshold', VarianceThreshold(threshold=0.05)),
+                ('scaler', MinMaxScaler()),
+                ('dim_reduction', SelectKBest(k=23)),
+                ('classifier', RandomForestClassifier())])"
+0.7833333333333332,0.7333333333333334,"Pipeline(steps=[('variance_threshold', VarianceThreshold(threshold=0)),
+                ('scaler', KBinsDiscretizer(encode='ordinal', n_bins=10)),
+                ('dim_reduction', SelectKBest(k=7)),
+                ('classifier', GaussianNB())])"
+0.7887052341597796,0.6871794871794873,"Pipeline(steps=[('variance_threshold', VarianceThreshold(threshold=0)),
+                ('scaler', None), ('dim_reduction', SelectKBest(k='all')),
+                ('classifier', LogisticRegression(C=10, max_iter=1000))])"
+0.8174104683195592,0.7244897959183674,"Pipeline(steps=[('variance_threshold', VarianceThreshold(threshold=0)),
+                ('scaler', None), ('dim_reduction', SelectKBest(k='all')),
+                ('classifier', LogisticRegression(C=10, max_iter=1000))])"
+0.7769283746556473,0.7551020408163266,"Pipeline(steps=[('variance_threshold', VarianceThreshold(threshold=0)),
+                ('scaler', KBinsDiscretizer(encode='ordinal', n_bins=10)),
+                ('dim_reduction', SelectKBest(k=5)),
+                ('classifier', GaussianNB())])"
+0.7808815426997245,0.7244897959183674,"Pipeline(steps=[('variance_threshold', VarianceThreshold(threshold=0)),
+                ('scaler', None), ('dim_reduction', SelectKBest(k=100)),
+                ('classifier', LogisticRegression(C=1, max_iter=1000))])"
+0.7315426997245178,0.9128205128205128,"Pipeline(steps=[('variance_threshold', VarianceThreshold(threshold=0)),
+                ('scaler', KBinsDiscretizer(encode='ordinal')),
+                ('dim_reduction', SelectKBest(k=7)),
+                ('classifier', GaussianNB())])"
+0.7823691460055097,0.8256410256410256,"Pipeline(steps=[('variance_threshold', VarianceThreshold(threshold=0)),
+                ('scaler', None), ('dim_reduction', SelectKBest(k='all')),
+                ('classifier', LogisticRegression(C=1, max_iter=1000))])"
