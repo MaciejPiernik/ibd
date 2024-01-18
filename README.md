@@ -42,7 +42,10 @@ For now, I'll conduct all of the experiments in notebooks, and go back to this o
 ## Current state of affairs
 I have implemented a comprehensive modeling pipeline in the ```experiment_playground.ipynb``` notebook.
 The output model predicts Infliximab response in patients with CD and UC with 0.78 cross-validation AUC.
-It identified 5 most importang genes, all of which have been shown to be involved in IBD pathogenesis: NAT2, A1BG, AKT3, ADA, and CDH2.
+It identified 5 most importang genes: DCBLD1, IL13RA2, CSGALNACT2, WNK2, SNAPC1.
+Some of those don't seem to make any sense, but some really, really do (e.g., IL13RA2 and WNK2).
+Furthermore, the correlation analysis shows that most of these genes actually don't have any other genes correlated above 0.8, with the exception of CSGALNACT2.
+This gene in and of itself doesn't seem to make sense at all, but it's correlated with a bunch of other genes that really do make sense: IL1R1, FGF7, LY96, MMP19.
 
 Next steps:
 - checking how the model performs on healthy controls,
