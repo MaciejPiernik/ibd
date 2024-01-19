@@ -24,9 +24,21 @@ Of course it is also very plausible that the model is simply wrong.
 For example, it doesn't consider the severity of the disease, so maybe it simply reflects it (which probably is a good predictor of response to any treatment).
 I also implemented a diagnostic model (0.88 CV AUC) to see if maybe some of the genes will be shared with the response model, but I didn't find any.
 
-Next steps:
-- semi-supervised learning,
-- going back and improving the whole pipeline.
+## Roadmap
+
+### Next steps
+- Semi-supervised model for Infliximab response prediction
+- Adding next platforms to gain access to more data
+- Going back and improving the whole pipeline
+- Adding an actual database
+- Collecting more data
+
+### [Further On Up The Road](https://www.youtube.com/watch?v=h5aVK70P88k)
+- Processing raw microarray data instead of processed expressions
+- Productization: dockerization, orchestration, automation, cloud processing, ...
+- Automating the process of building predictive models
+- Foundation model for gene expression
+- Application for non-coding users
 
 ## Setup
 After downloading the repo, first install the dependencies.
