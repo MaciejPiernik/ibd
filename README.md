@@ -24,10 +24,14 @@ Of course it is also very plausible that the model is simply wrong.
 For example, it doesn't consider the severity of the disease, so maybe it simply reflects it (which probably is a good predictor of response to any treatment).
 I also implemented a diagnostic model (0.88 CV AUC) to see if maybe some of the genes will be shared with the response model, but I didn't find any.
 
+Semi-supervised learning with additional 450 samples without response doesn't improve the performance at all, but it is probably due to poor normalization, because we're adding many new datasets.
+That's why I think it's time to stop playing around with the model, taking a few steps back, and improving the previous steps of the pipeline.
+
 ## Roadmap
 
 ### Next steps
-- Semi-supervised model for Infliximab response prediction
+- More work on normalization
+- Extracting biopsy location and inflammation status from metadata
 - Adding next platforms to gain access to more data
 - Going back and improving the whole pipeline
 - Adding an actual database

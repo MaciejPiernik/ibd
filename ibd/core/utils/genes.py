@@ -2,13 +2,15 @@ import mygene
 
 
 def entrez_id_to_gene_symbol(X, drop_na=True):
-    X.columns = X.columns.map(str)  # Make sure ENTREZ IDs are strings
+    result = X.copy()
+
+    result.columns = result.columns.map(str)  # Make sure ENTREZ IDs are strings
 
     # Initialize MyGeneInfo
     mg = mygene.MyGeneInfo()
 
     # Create a list of ENTREZ IDs
-    entrez_ids = list(X.columns)
+    entrez_ids = list(result.columns)
 
     # Query MyGene.Info for the gene symbols
     gene_info = mg.querymany(entrez_ids, scopes='entrezgene', fields='symbol', species='human', as_dataframe=True)
@@ -20,12 +22,12 @@ def entrez_id_to_gene_symbol(X, drop_na=True):
     entrez_to_symbol = gene_info.loc[gene_info['notfound'] != True, 'symbol'].drop_duplicates()
 
     # Replace columns in the dataframe with their gene symbols
-    X.columns = X.columns.map(entrez_to_symbol)
+    result.columns = result.columns.map(entrez_to_symbol)
 
-    X.columns = X.columns.astype(str)
+    result.columns = result.columns.astype(str)
 
     # drop columns with nan as name
-    if drop_na and ('nan' in X.columns):
-        X = X.drop(['nan'], axis=1)
+    if drop_na and ('nan' in result.columns):
+        result = result.drop(['nan'], axis=1)
 
-    return X
+    return result
