@@ -7,8 +7,8 @@ But I still can't wrap my head around the fact that currently patients are treat
 That's why, we're starting with the problem of drug response prediction.
 
 ## Current status
-So far, I've found ~2500 samples of expression data from mucosal biopsies of IBD patients, spanning across 32 datasets and 13 different platforms (see ```data/DAQ.csv```).
-All of the datasets are from the Gene Expression Omnibus (GEO).
+So far, I've found ~2500 samples of expression data from mucosal biopsies of IBD patients, spanning across 32 datasets and 13 different platforms (see [Datsets](#datasets)).
+All of the datasets collected so far are from the Gene Expression Omnibus (GEO).
 To analyze this data together, I've implemented a data processing pipeline for 3 platforms and several datasets, allowing me to play around with ~1k samples.
 The expressions are 
 I have also implemented a comprehensive modeling pipeline in the ```ibd/notebooks/experiment_playground.ipynb``` notebook.
@@ -27,6 +27,43 @@ I also implemented a diagnostic model (0.88 CV AUC) to see if maybe some of the 
 Semi-supervised learning with additional 450 samples without response doesn't improve the performance at all, but it is probably due to poor normalization, because we're adding many new datasets.
 That's why I think it's time to stop playing around with the model, taking a few steps back, and improving the previous steps of the pipeline.
 
+## Datasets
+
+Accession number|Platform|No samples|Disease|Treatment|Processed
+-|-|-|-|-|-
+GSE179285|GPL6480|254|CD, UC, control||Yes
+GSE11223|GPL1708|202|UC, control||Yes
+GSE75214|GPL6244|194|CD, UC, control||
+GSE92415|GPL13158|183|UC, control||
+GSE73661|GPL6244|178|UC|Infliximab, Vedolizumab|Yes
+GSE48634|GPL10558|171|CD, UC, control||
+GSE87473|GPL13158|127|UC, control||
+GSE3629|GPL570|121|UC, colorectal cancer||
+GSE59071|GPL6244|116|CD, UC||Duplicate of GSE75214
+GSE23597|GPL570|113|UC|Infliximab, Vedolizumab|Yes
+GSE87466|GPL13158|108|UC, control||
+GSE16879|GPL570|73|CD, UC, control|Infliximab|Yes
+GSE10616|GPL5760|58|CD, UC, control||
+GSE13367|GPL570|56|UC, control||
+GSE38713|GPL570|43|UC||
+GSE96665|GPL13607|41|CD, UC||
+GSE53306|GPL14951|40|UC, control||
+GSE52746|GPL17996|39|CD, control|Infliximab|Yes
+GSE114527|GPL14951|38|UC||
+GSE6731|GPL8300|36|CD, UC||
+GSE36807|GPL570|35|CD, UC, control||Yes
+GSE9686|GPL5760|33|CD, UC, control||
+GSE14580|GPL570|30|UC|Infliximab|Duplicate of GSE16879
+GSE22619|GPL570|30|UC||Yes
+GSE74265|GPL570|30|UC||
+GSE9452|GPL570|26|UC||Yes
+GSE12251|GPL570|23|UC|Infliximab|Duplicate of GSE23597
+GSE1152|GPL96|12|CD, UC, control||
+GSE72780|GPL570|9|CD||Yes
+GSE111761|GPL13497|6|CD|anti-TNF|
+GSE1141|GPL96|6|CD||
+GSE1142|GPL97|6|CD||Duplicate of GSE1141
+
 ## Roadmap
 
 ### Next steps
@@ -34,6 +71,8 @@ That's why I think it's time to stop playing around with the model, taking a few
 - Extracting biopsy location and inflammation status from metadata
 - Adding next platforms to gain access to more data
 - Going back and improving the whole pipeline
+- Metadata processing as generic code + configs instead of classes
+- Include sample controls
 - Adding an actual database
 - Collecting more data
 
@@ -64,7 +103,7 @@ python -m ibd run-pipeline
 `````
 
 In order for it to work, there needs to be:
-- a class to process the expression data for a given platform (currently supported platforms are: ```GPL1708```, ```GPL6244```, ```GPL570```, and ```GPL17996```, which cover 90% of the samples),
+- a class to process the expression data for a given platform (currently supported platforms are: ```GPL1708```, ```GPL6244```, ```GPL570```, and ```GPL17996```),
 - a class to process the metadata, which is unfortunately dataset specific.
 
 The package also contains a mock for runnig an experiment, but that's for later.

@@ -14,7 +14,6 @@ class Dataset:
     raw_dataset: pd.DataFrame
     metadata: pd.DataFrame
     data: pd.DataFrame
-    ensembl_release: int
 
 
     @property
@@ -22,9 +21,8 @@ class Dataset:
         return self.raw_dataset.metadata['platform_id'][0]
 
 
-    def __init__(self, id, ensembl_release):
+    def __init__(self, id):
         self.id = id
-        self.ensembl_release = ensembl_release
 
 
     def load_raw_data(self, cache_dir='./data/geo_cache'):

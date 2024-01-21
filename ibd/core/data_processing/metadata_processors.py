@@ -6,11 +6,13 @@ DISEASE_MAP = {
     "Crohn's disease": "CD",
 
     'UC': 'UC',
-    'ulcerative colitis': "UC",
+    'ulcerative colitis': 'UC',
+    'Ulcerative colitis': 'UC',
 
     'Normal': 'Ctrl',
     'Control': 'Ctrl',
-    'control': "Ctrl",
+    'control': 'Ctrl',
+    'Healthy control': 'Ctrl',
 }
 
 
@@ -31,6 +33,7 @@ class GSE11223_MetadataProcessor:
         result['time_of_biopsy'] = None
 
         return result
+
 
 class GSE75214_MetadataProcessor:
     def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
@@ -53,7 +56,8 @@ class GSE75214_MetadataProcessor:
         metadata['disease'] = metadata['disease'].map(DISEASE_MAP)
 
         return metadata
-    
+
+
 class GSE73661_MetadataProcessor:
     def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
         PATIENT_ID = 'characteristics_ch1.0.study individual number'
@@ -71,6 +75,7 @@ class GSE73661_MetadataProcessor:
         result['time_of_biopsy'] = metadata[TIME_OF_BIOPSY].map(lambda x: None if x == 'CO' else x)
 
         return result
+
 
 class GSE23597_MetadataProcessor:
     def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
@@ -93,7 +98,8 @@ class GSE23597_MetadataProcessor:
         result['response'] = metadata.apply(lambda x: x[RESPONSE[0]] if x[TIME_OF_BIOPSY] == 'W8' else (x[RESPONSE[1]] if x[TIME_OF_BIOPSY] == 'W30' else None), axis=1)
 
         return result
-    
+
+
 class GSE16879_MetadataProcessor:
     def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
         PATIENT_ID = 'title'
@@ -117,7 +123,8 @@ class GSE16879_MetadataProcessor:
         result['time_of_biopsy'] = metadata[TIME_OF_BIOPSY].map(TIME_OF_BIOPSY_MAP)
 
         return result
-    
+
+
 class GSE52746_MetadataProcessor:
     def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
         PATIENT_ID = 'characteristics_ch1.2.patient'
@@ -135,7 +142,8 @@ class GSE52746_MetadataProcessor:
         result['time_of_biopsy'] = metadata[TIME_OF_BIOPSY].map(lambda x: 'Before' if 'without' in x else ('After' if ' with ' in x else None))
 
         return result
-    
+
+
 class GSE36807_MetadataProcessor:
     def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
         PATIENT_ID = 'title'
@@ -159,7 +167,8 @@ class GSE36807_MetadataProcessor:
         result['time_of_biopsy'] = None
 
         return result
-    
+
+
 class GSE22619_MetadataProcessor:
     def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
         PATIENT_ID = 'title'
@@ -188,6 +197,7 @@ class GSE22619_MetadataProcessor:
 
         return result
     
+
 class GSE9452_MetadataProcessor:
     def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
         PATIENT_ID = 'title'
@@ -205,7 +215,8 @@ class GSE9452_MetadataProcessor:
         result['time_of_biopsy'] = None
 
         return result
-    
+
+
 class GSE72780_MetadataProcessor:
     def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
         PATIENT_ID = None
@@ -221,5 +232,28 @@ class GSE72780_MetadataProcessor:
         result['treatment'] = None
         result['response'] = None
         result['time_of_biopsy'] = None
+
+        return result
+    
+
+class GSE179285_MetadataProcessor:
+    def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
+        PATIENT_ID = 'title'
+        DISEASE = 'characteristics_ch1.1.diagnosis'
+        TREATMENT = None
+        RESPONSE = None
+        TIME_OF_BIOPSY = None
+        TISSUE = 'characteristics_ch1.3.tissue'
+        INFLAMMATION = 'characteristics_ch1.2.inflammation'
+
+        result = pd.DataFrame()
+
+        result['patient_id'] = metadata[PATIENT_ID].map(lambda x: x.split('_')[0])
+        result['disease'] = metadata[DISEASE].map(DISEASE_MAP)
+        result['treatment'] = None
+        result['response'] = None
+        result['time_of_biopsy'] = None
+        result['tissue'] = metadata[TISSUE]
+        result['inflammation'] = metadata[INFLAMMATION]
 
         return result

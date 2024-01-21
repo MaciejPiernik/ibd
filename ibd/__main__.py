@@ -30,9 +30,8 @@ def run_pipeline(datasets):
     for dataset_id in dataset_ids:
         if dataset_id not in daq['Accession number'].values.tolist():
             raise Exception(f'Dataset {dataset_id} not found in database')
-        
-        ensembl_release = daq[daq['Accession number'] == dataset_id]['Ensembl release'].iloc[0]
-        new_dataset = Dataset(dataset_id, ensembl_release)
+
+        new_dataset = Dataset(dataset_id)
 
         datasets.append(new_dataset)
 

@@ -6,6 +6,7 @@ import numpy as np
 from ibd.core.platforms.GPL1708 import GPL1708
 from ibd.core.platforms.GPL570 import GPL570
 from ibd.core.platforms.GPL6244 import GPL6244
+from ibd.core.platforms.GPL6480 import GPL6480
 
 
 class Platform:
@@ -40,9 +41,11 @@ class Platform:
     def get_platform(self, platform_id):
         if platform_id in ['GPL570', 'GPL17996']:
             return GPL570()
-        elif platform_id == 'GPL1708':
+        elif platform_id == ['GPL1708']:
             return GPL1708()
         elif platform_id == 'GPL6244':
             return GPL6244()
+        elif platform_id == 'GPL6480':
+            return GPL6480()
         else:
             raise NotImplementedError(f'{platform_id} is not implemented yet')
