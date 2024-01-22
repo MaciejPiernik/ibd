@@ -33,7 +33,7 @@ Accession number|Platform|No samples|Disease|Treatment|Processed
 -|-|-|-|-|-
 GSE179285|GPL6480|254|CD, UC, control||Yes
 GSE11223|GPL1708|202|UC, control||Yes
-GSE75214|GPL6244|194|CD, UC, control||
+GSE75214|GPL6244|194|CD, UC, control||Yes
 GSE92415|GPL13158|183|UC, control||
 GSE73661|GPL6244|178|UC|Infliximab, Vedolizumab|Yes
 GSE48634|GPL10558|171|CD, UC, control||

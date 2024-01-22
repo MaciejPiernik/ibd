@@ -257,3 +257,32 @@ class GSE179285_MetadataProcessor:
         result['inflammation'] = metadata[INFLAMMATION]
 
         return result
+
+
+class GSE75214_MetadataProcessor:
+    def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
+        PATIENT_ID = 'title'
+        DISEASE = 'characteristics_ch1.1.disease'
+        TREATMENT = None
+        RESPONSE = None
+        TIME_OF_BIOPSY = None
+        TISSUE = 'characteristics_ch1.0.tissue'
+        INFLAMMATION = 'characteristics_ch1.2.disease activity'
+
+        INFLAMMATION_MAP = {
+            'active': 'Inflamed',
+            'inactive': 'Uninflamed',
+            'normal': 'Uninflamed'
+        }
+
+        result = pd.DataFrame()
+
+        result['patient_id'] = metadata[PATIENT_ID].map(lambda x: x.split('_')[-1])
+        result['disease'] = metadata[DISEASE].map(DISEASE_MAP)
+        result['treatment'] = None
+        result['response'] = None
+        result['time_of_biopsy'] = None
+        result['tissue'] = metadata[TISSUE].map(lambda x: x.capitalize())
+        result['inflammation'] = metadata[INFLAMMATION].map(INFLAMMATION_MAP)
+
+        return result
