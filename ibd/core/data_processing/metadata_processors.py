@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 
@@ -8,6 +9,7 @@ DISEASE_MAP = {
     'UC': 'UC',
     'ulcerative colitis': 'UC',
     'Ulcerative colitis': 'UC',
+    'Ulcerative Colitis (UC)': 'UC',
 
     'Normal': 'Ctrl',
     'Control': 'Ctrl',
@@ -284,5 +286,36 @@ class GSE75214_MetadataProcessor:
         result['time_of_biopsy'] = None
         result['tissue'] = metadata[TISSUE].map(lambda x: x.capitalize())
         result['inflammation'] = metadata[INFLAMMATION].map(INFLAMMATION_MAP)
+
+        return result
+
+
+class GSE92415_MetadataProcessor:
+    def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
+        PATIENT_ID = 'characteristics_ch1.1.subject'
+        DISEASE = 'characteristics_ch1.2.disease'
+        TREATMENT = 'characteristics_ch1.4.treatment'
+        RESPONSE = 'characteristics_ch1.6.wk6response'
+        TIME_OF_BIOPSY = 'characteristics_ch1.5.visit'
+        TISSUE = 'characteristics_ch1.0.tissue'
+        INFLAMMATION = None
+        MAYO_SCORE = 'characteristics_ch1.7.mayo score'
+
+        curr_uid = 0
+        def get_next_id():
+            nonlocal curr_uid
+            curr_uid += 1
+            return f'C{curr_uid}'
+
+        result = pd.DataFrame()
+
+        result['patient_id'] = metadata[PATIENT_ID].map(lambda x: x if not pd.isna(x) else get_next_id())
+        result['disease'] = metadata[DISEASE].map(lambda x: 'UC' if not pd.isna(x) else 'Ctrl')
+        result['treatment'] = metadata[TREATMENT].map(lambda x: x.capitalize() if not pd.isna(x) else None)
+        result['response'] = metadata[RESPONSE].map(lambda x: x if not pd.isna(x) else None)
+        result['time_of_biopsy'] = metadata[TIME_OF_BIOPSY].map(lambda x: 'W0' if x == 'Week 0' else ('W6' if x == 'Week 6' else None))
+        result['tissue'] = metadata[TISSUE].map(lambda x: 'Colon')
+        result['inflammation'] = None
+        result['mayo_score'] = metadata[MAYO_SCORE]
 
         return result

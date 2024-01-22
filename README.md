@@ -34,7 +34,7 @@ Accession number|Platform|No samples|Disease|Treatment|Processed
 GSE179285|GPL6480|254|CD, UC, control||Yes
 GSE11223|GPL1708|202|UC, control||Yes
 GSE75214|GPL6244|194|CD, UC, control||Yes
-GSE92415|GPL13158|183|UC, control||
+GSE92415|GPL13158|183|UC, control||Yes
 GSE73661|GPL6244|178|UC|Infliximab, Vedolizumab|Yes
 GSE48634|GPL10558|171|CD, UC, control||
 GSE87473|GPL13158|127|UC, control||
@@ -63,6 +63,9 @@ GSE72780|GPL570|9|CD||Yes
 GSE111761|GPL13497|6|CD|anti-TNF|
 GSE1141|GPL96|6|CD||
 GSE1142|GPL97|6|CD||Duplicate of GSE1141
+
+The visualization below illustrates the samples processed so far after batch normalization.
+![image info](results/umap.png)
 
 ## Roadmap
 
