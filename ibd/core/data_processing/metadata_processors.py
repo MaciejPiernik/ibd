@@ -319,3 +319,34 @@ class GSE92415_MetadataProcessor:
         result['mayo_score'] = metadata[MAYO_SCORE]
 
         return result
+
+
+class GSE87473_MetadataProcessor:
+    def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
+        PATIENT_ID = 'characteristics_ch1.0.subject'
+        DISEASE = 'characteristics_ch1.2.disease'
+        TREATMENT = None
+        RESPONSE = None
+        TIME_OF_BIOPSY = None
+        TISSUE = 'characteristics_ch1.4.tissue'
+        INFLAMMATION = None
+        MAYO_SCORE = None
+
+        curr_uid = 0
+        def get_next_id():
+            nonlocal curr_uid
+            curr_uid += 1
+            return f'C{curr_uid}'
+
+        result = pd.DataFrame()
+
+        result['patient_id'] = metadata[PATIENT_ID].map(lambda x: x if not pd.isna(x) else get_next_id())
+        result['disease'] = metadata[DISEASE].map(DISEASE_MAP)
+        result['treatment'] = None
+        result['response'] = None
+        result['time_of_biopsy'] = None
+        result['tissue'] = metadata[TISSUE]
+        result['inflammation'] = None
+        result['mayo_score'] = None
+
+        return result
