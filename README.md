@@ -66,12 +66,15 @@ GSE1141|GPL96|6|CD||
 GSE1142|GPL97|6|CD||Duplicate of GSE1141
 
 The visualization below illustrates the samples processed so far after batch normalization.
+I really don't like how this looks right now.
+Serious batch effects are visible, and I suspect they are due to the fact that some of the datasets are actually composed of several others.
+This means, that the normalization is not working as intended.
 ![image info](results/umap.png)
 
 ## Roadmap
 
 ### Next steps
-- More work on normalization
+- More work on normalization!!!
 - Extracting biopsy location and inflammation status from metadata
 - Adding next platforms to gain access to more data
 - Going back and improving the whole pipeline
