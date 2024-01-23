@@ -2,6 +2,7 @@ import logging
 
 import pandas as pd
 import numpy as np
+from ibd.core.platforms.GPL10558 import GPL10558
 
 from ibd.core.platforms.GPL13158 import GPL13158
 from ibd.core.platforms.GPL1708 import GPL1708
@@ -42,7 +43,7 @@ class Platform:
     def get_platform(self, platform_id):
         if platform_id in ['GPL570', 'GPL17996']:
             return GPL570()
-        elif platform_id == ['GPL1708']:
+        elif platform_id == 'GPL1708':
             return GPL1708()
         elif platform_id == 'GPL6244':
             return GPL6244()
@@ -50,5 +51,7 @@ class Platform:
             return GPL6480()
         elif platform_id == 'GPL13158':
             return GPL13158()
+        elif platform_id == 'GPL10558':
+            return GPL10558()
         else:
             raise NotImplementedError(f'{platform_id} is not implemented yet')

@@ -4,7 +4,7 @@ import pandas as pd
 
 DISEASE_MAP = {
     'CD': 'CD',
-    "Crohn's disease": "CD",
+    "Crohn's disease": 'CD',
 
     'UC': 'UC',
     'ulcerative colitis': 'UC',
@@ -15,6 +15,7 @@ DISEASE_MAP = {
     'Control': 'Ctrl',
     'control': 'Ctrl',
     'Healthy control': 'Ctrl',
+    'healthy control': 'Ctrl',
 }
 
 
@@ -332,20 +333,39 @@ class GSE87473_MetadataProcessor:
         INFLAMMATION = None
         MAYO_SCORE = None
 
-        curr_uid = 0
-        def get_next_id():
-            nonlocal curr_uid
-            curr_uid += 1
-            return f'C{curr_uid}'
-
         result = pd.DataFrame()
 
-        result['patient_id'] = metadata[PATIENT_ID].map(lambda x: x if not pd.isna(x) else get_next_id())
+        result['patient_id'] = metadata[PATIENT_ID]
         result['disease'] = metadata[DISEASE].map(DISEASE_MAP)
         result['treatment'] = None
         result['response'] = None
         result['time_of_biopsy'] = None
         result['tissue'] = metadata[TISSUE]
+        result['inflammation'] = None
+        result['mayo_score'] = None
+
+        return result
+
+
+class GSE48634_MetadataProcessor:
+    def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
+        PATIENT_ID = 'title'
+        DISEASE = 'characteristics_ch1.2.disease state'
+        TREATMENT = None
+        RESPONSE = None
+        TIME_OF_BIOPSY = None
+        TISSUE = 'characteristics_ch1.4.tissue'
+        INFLAMMATION = None
+        MAYO_SCORE = None
+
+        result = pd.DataFrame()
+
+        result['patient_id'] = metadata[PATIENT_ID].map(lambda x: x.split(' ')[-1])
+        result['disease'] = metadata[DISEASE].map(DISEASE_MAP)
+        result['treatment'] = None
+        result['response'] = None
+        result['time_of_biopsy'] = None
+        result['tissue'] = metadata[TISSUE].map(lambda x: 'Colon' if 'colon' in x.lower() else ('Ileum' if 'ileum' in x.lower() else 'Rectum'))
         result['inflammation'] = None
         result['mayo_score'] = None
 
