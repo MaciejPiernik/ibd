@@ -322,7 +322,57 @@ class GSE92415_MetadataProcessor:
         return result
 
 
-class GSE87473_MetadataProcessor:
+# class GSE87473_MetadataProcessor:
+#     def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
+#         PATIENT_ID = 'characteristics_ch1.0.subject'
+#         DISEASE = 'characteristics_ch1.2.disease'
+#         TREATMENT = None
+#         RESPONSE = None
+#         TIME_OF_BIOPSY = None
+#         TISSUE = 'characteristics_ch1.4.tissue'
+#         INFLAMMATION = None
+#         MAYO_SCORE = None
+
+#         result = pd.DataFrame()
+
+#         result['patient_id'] = metadata[PATIENT_ID]
+#         result['disease'] = metadata[DISEASE].map(DISEASE_MAP)
+#         result['treatment'] = None
+#         result['response'] = None
+#         result['time_of_biopsy'] = None
+#         result['tissue'] = metadata[TISSUE]
+#         result['inflammation'] = None
+#         result['mayo_score'] = None
+
+#         return result
+
+
+class GSE48634_MetadataProcessor:
+    def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
+        PATIENT_ID = 'title'
+        DISEASE = 'characteristics_ch1.2.disease state'
+        TREATMENT = None
+        RESPONSE = None
+        TIME_OF_BIOPSY = None
+        TISSUE = 'characteristics_ch1.4.tissue'
+        INFLAMMATION = None
+        MAYO_SCORE = None
+
+        result = pd.DataFrame()
+
+        result['patient_id'] = metadata[PATIENT_ID].map(lambda x: x.split(' ')[-1])
+        result['disease'] = metadata[DISEASE].map(DISEASE_MAP)
+        result['treatment'] = None
+        result['response'] = None
+        result['time_of_biopsy'] = None
+        result['tissue'] = metadata[TISSUE].map(lambda x: 'Colon' if 'colon' in x.lower() else ('Ileum' if 'ileum' in x.lower() else 'Rectum'))
+        result['inflammation'] = None
+        result['mayo_score'] = None
+
+        return result
+    
+
+class GSE87466_MetadataProcessor:
     def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
         PATIENT_ID = 'characteristics_ch1.0.subject'
         DISEASE = 'characteristics_ch1.2.disease'
@@ -345,12 +395,12 @@ class GSE87473_MetadataProcessor:
         result['mayo_score'] = None
 
         return result
+    
 
-
-class GSE48634_MetadataProcessor:
+class GSE87465_MetadataProcessor:
     def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
-        PATIENT_ID = 'title'
-        DISEASE = 'characteristics_ch1.2.disease state'
+        PATIENT_ID = 'characteristics_ch1.0.subject'
+        DISEASE = 'characteristics_ch1.2.disease'
         TREATMENT = None
         RESPONSE = None
         TIME_OF_BIOPSY = None
@@ -360,12 +410,12 @@ class GSE48634_MetadataProcessor:
 
         result = pd.DataFrame()
 
-        result['patient_id'] = metadata[PATIENT_ID].map(lambda x: x.split(' ')[-1])
+        result['patient_id'] = metadata[PATIENT_ID]
         result['disease'] = metadata[DISEASE].map(DISEASE_MAP)
         result['treatment'] = None
         result['response'] = None
         result['time_of_biopsy'] = None
-        result['tissue'] = metadata[TISSUE].map(lambda x: 'Colon' if 'colon' in x.lower() else ('Ileum' if 'ileum' in x.lower() else 'Rectum'))
+        result['tissue'] = metadata[TISSUE]
         result['inflammation'] = None
         result['mayo_score'] = None
 
