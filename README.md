@@ -38,7 +38,7 @@ GSE92415|GPL13158|183|UC, control||Yes
 GSE73661|GPL6244|178|UC|Infliximab, Vedolizumab|Yes
 GSE48634|GPL10558|171|CD, UC, control||Yes
 GSE87473|GPL13158|127|UC, control||Combination of GSE87465 and GSE87466
-GSE3629|GPL570|121|UC, colorectal cancer||
+GSE3629|GPL570|121|UC, colorectal cancer||Yes
 GSE59071|GPL6244|116|CD, UC||Subset of GSE75214
 GSE23597|GPL570|113|UC|Infliximab, Vedolizumab|Yes
 GSE87466|GPL13158|108|UC, control||Yes
@@ -66,10 +66,11 @@ GSE1141|GPL96|6|CD||
 GSE1142|GPL97|6|CD||Duplicate of GSE1141
 
 The visualization below illustrates the samples processed so far after batch normalization.
+The color represents the dataset.
 ![image info](results/umap.png)
 
 There's something weird going on with the samples from GSE48634, so I've excluded them from the plot.
-It seems as though they are composed of 2 separate datasets, one with the majority of samples very similar to all other, and the other with only a handful of samples, but sompletely different from the rest.
+It seems as though they are composed of 2 separate datasets, one with the majority of samples very similar to all other, and the other with only a handful of samples, but completely different from the rest.
 
 ## Roadmap
 

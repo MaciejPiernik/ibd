@@ -10,6 +10,12 @@ DISEASE_MAP = {
     'ulcerative colitis': 'UC',
     'Ulcerative colitis': 'UC',
     'Ulcerative Colitis (UC)': 'UC',
+    'UC-NonCa': 'UC',
+
+    'Sporadic Ca': 'CRC',
+
+    'UC-Ca': 'UC, CRC',
+    'UC-associated Ca': 'UC, CRC',
 
     'Normal': 'Ctrl',
     'Control': 'Ctrl',
@@ -416,6 +422,31 @@ class GSE87465_MetadataProcessor:
         result['response'] = None
         result['time_of_biopsy'] = None
         result['tissue'] = metadata[TISSUE]
+        result['inflammation'] = None
+        result['mayo_score'] = None
+
+        return result
+    
+
+class GSE3629_MetadataProcessor:
+    def process(self, metadata: pd.DataFrame) -> pd.DataFrame:
+        PATIENT_ID = 'source_name_ch1'
+        DISEASE = 'description'
+        TREATMENT = None
+        RESPONSE = None
+        TIME_OF_BIOPSY = None
+        TISSUE = None
+        INFLAMMATION = None
+        MAYO_SCORE = None
+
+        result = pd.DataFrame()
+
+        result['patient_id'] = metadata[PATIENT_ID]
+        result['disease'] = metadata[DISEASE].map(DISEASE_MAP)
+        result['treatment'] = None
+        result['response'] = None
+        result['time_of_biopsy'] = None
+        result['tissue'] = 'Rectum'
         result['inflammation'] = None
         result['mayo_score'] = None
 

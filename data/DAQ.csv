@@ -6,7 +6,7 @@ GSE92415;GPL13158;183;UC, control;;Yes
 GSE73661;GPL6244;178;UC;Infliximab, Vedolizumab;Yes
 GSE48634;GPL10558;171;CD, UC, control;;Yes
 GSE87473;GPL13158;127;UC, control;;Combination of GSE87466 and GSE87465
-GSE3629;GPL570;121;UC, colorectal cancer;;
+GSE3629;GPL570;121;UC, colorectal cancer;;Yes
 GSE59071;GPL6244;116;CD, UC;;Subset of GSE75214
 GSE23597;GPL570;113;UC;Infliximab, Vedolizumab;Yes
 GSE87466;GPL13158;108;UC, control;;Yes
