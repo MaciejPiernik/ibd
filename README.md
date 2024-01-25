@@ -65,17 +65,24 @@ GSE111761|GPL13497|6|CD|anti-TNF|
 GSE1141|GPL96|6|CD||
 GSE1142|GPL97|6|CD||Duplicate of GSE1141
 
-The visualization below illustrates the samples processed so far after batch normalization.
+The visualization below illustrates the samples processed so far after two types of normalization (quantile and z-score).
 The color represents the dataset.
+
 ![image info](results/umap.png)
 
-There's something weird going on with the samples from GSE48634, so I've excluded them from the plot.
-It seems as though they are composed of 2 separate datasets, one with the majority of samples very similar to all other, and the other with only a handful of samples, but completely different from the rest.
+Clearly, quantile normalization doesn't work here.
+The robust Z-score normalization seems to work better, but there are still a couple of samples that are very different from the rest.
+There's also something weird going on with the samples from GSE48634, so I've excluded them from the plot.
+It seems as though this dataset is composed of 2 separate datasets, one with the majority of samples very similar to all other, and the other with only a handful of samples, but completely different from the rest, but I've looked at the metadata and it doesn't seem to be the case.
+Maybe I just need to add outlier detection to the pipeline?
+
+I just found the [ARCHS4 database](https://maayanlab.cloud/archs4/index.html), which contains over 130k samples of human gene expression, all uniformly processed!
 
 ## Roadmap
 
 ### Next steps
 - More work on normalization!!!
+- Outlier detection
 - Extracting biopsy location and inflammation status from metadata
 - Adding next platforms to gain access to more data
 - Going back and improving the whole pipeline
@@ -86,6 +93,7 @@ It seems as though they are composed of 2 separate datasets, one with the majori
 
 ### [Further On Up The Road](https://www.youtube.com/watch?v=h5aVK70P88k)
 - Processing raw microarray data instead of processed expressions
+- Extend the platform to RNASeq data
 - Productization: dockerization, orchestration, automation, cloud processing, ...
 - Automating the process of building predictive models
 - Foundation model for gene expression
