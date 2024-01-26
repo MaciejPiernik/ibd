@@ -74,7 +74,11 @@ Clearly, quantile normalization doesn't work here.
 The robust Z-score normalization seems to work better, but there are still a couple of samples that are very different from the rest.
 There's also something weird going on with the samples from GSE48634, so I've excluded them from the plot.
 It seems as though this dataset is composed of 2 separate datasets, one with the majority of samples very similar to all other, and the other with only a handful of samples, but completely different from the rest, but I've looked at the metadata and it doesn't seem to be the case.
-Maybe I just need to add outlier detection to the pipeline?
+
+Performing outlier detection seems to do the trick.
+Here's the same plot, but with outliers removed.
+
+![image info](results/outliers.png)
 
 I just found the [ARCHS4 database](https://maayanlab.cloud/archs4/index.html), which contains over 130k samples of human gene expression, all uniformly processed!
 
