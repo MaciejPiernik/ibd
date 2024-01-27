@@ -3,8 +3,11 @@ import logging
 
 import pandas as pd
 
-from ibd.core.platforms.Platform import Platform
 import ibd.core.data_processing.metadata_processors
+
+from ibd.core.data_processing.gpt_metadata_processor import GPTMetadataProcessor
+from ibd.core.platforms.Platform import Platform
+
 
 GEOparse.logger.set_verbosity("ERROR")
 
@@ -42,7 +45,8 @@ class Dataset:
 
     def process_metadata(self):
         logging.info(f'Processing metadata for dataset {self.id}')
-        processor = self.get_metadata_processor()
+        # processor = self.get_metadata_processor()
+        processor = GPTMetadataProcessor()
 
         return processor.process(self.raw_dataset.phenotype_data)
 
@@ -51,7 +55,7 @@ class Dataset:
         logging.info(f'Saving dataset {self.id}')
 
         self.data.to_parquet(f'./db/{self.id}.parquet')
-        self.metadata.to_parquet(f'./db/{self.id}_metadata.parquet')
+        self.metadata.to_parquet(f'./db/{self.id}_metadata_gpt.parquet')
 
 
     def get_metadata_processor(self):

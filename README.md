@@ -86,9 +86,6 @@ I just found the [ARCHS4 database](https://maayanlab.cloud/archs4/index.html), w
 
 ### Next steps
 - More work on normalization!!!
-- Outlier detection
-- Extracting biopsy location and inflammation status from metadata
-- Adding next platforms to gain access to more data
 - Going back and improving the whole pipeline
 - Metadata processing as generic code + configs instead of classes
 - Include sample controls

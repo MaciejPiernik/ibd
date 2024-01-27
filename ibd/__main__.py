@@ -1,12 +1,16 @@
 import logging
 import click
 import pandas as pd
-from ibd.core.data_structures.Dataset import Dataset
 
+from dotenv import load_dotenv
+
+from ibd.core.data_structures.Dataset import Dataset
 from ibd.experiments.Experiment import Experiment
 from ibd.core.data_processing.processing import process_all
 
 logging.basicConfig(level=logging.INFO)
+
+load_dotenv()
 
 
 @click.group()
