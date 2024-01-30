@@ -5,7 +5,7 @@ For each row of csv metadata about samples from IBD patients, you return one row
 - disease - either UC, CD, CRC, or Healthy; can't be empty.
 - treatment - the name of treatment given to patient; can be empty.
 - response - response to the given treatment; Yes, No, Other; can be empty.
-- time_of_biopsy - the time a given sample was taken; W0 means the sample tas taken before the treatment (or at week 0), Wn means the sample was taken at the n-th week after receiving the treatment; if the exact week after the treatment is unknown, return WX; can be empty.
+- time_of_biopsy - the time a given sample was taken; W0 means the sample was taken before the treatment (or at week 0), Wn means the sample was taken at the n-th week after receiving the treatment; if the exact week after the treatment is unknown, return WX; can be empty.
 - tissue - the tissue from which the sample was taken, e.g., Colon, Ileum, Rectum.
 - inflammation - was the sample taken from an inflammed or uninflammed tissue; can be empty.
 

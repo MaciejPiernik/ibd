@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 
 from ibd.core.data_structures.Dataset import Dataset
 from ibd.experiments.Experiment import Experiment
-from ibd.core.data_processing.processing import process_all
 
 logging.basicConfig(level=logging.INFO)
 
@@ -20,7 +19,9 @@ def cli():
 
 @cli.command()
 @click.option('--datasets', '-d', help='The datasets to process', default='all')
-def run_pipeline(datasets):
+@click.option('--recompute_data', '-r', help='Recompute data', is_flag=True, default=False)
+@click.option('--recompute_metadata', '-m', help='Recompute metadata', is_flag=True, default=False)
+def run_pipeline(datasets, recompute_data, recompute_metadata):
     logging.info('Running data processing pipeline')
 
     daq = pd.read_csv('./data/DAQ.csv', sep=';')
@@ -30,16 +31,22 @@ def run_pipeline(datasets):
     else:
         dataset_ids = datasets.split(',')
 
-    datasets = []
     for dataset_id in dataset_ids:
         if dataset_id not in daq['Accession number'].values.tolist():
             raise Exception(f'Dataset {dataset_id} not found in database')
 
-        new_dataset = Dataset(dataset_id)
+        dataset = Dataset(dataset_id)
 
-        datasets.append(new_dataset)
+        logging.info('Processing dataset {}'.format(dataset.id))
+        try:
+            if dataset.data_in_db() and not recompute_data and dataset.metadata_in_db() and not recompute_metadata:
+                logging.info('Dataset {} data already in database, skipping'.format(dataset.id))
+                continue
+            
+            dataset.process(recompute_data, recompute_metadata)
 
-    process_all(datasets)
+        except Exception as e:
+            logging.error('Error processing dataset {}: {}'.format(dataset.id, e))
 
 
 @cli.command()

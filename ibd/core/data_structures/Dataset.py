@@ -1,3 +1,5 @@
+from io import StringIO
+import os
 import GEOparse
 import logging
 
@@ -17,6 +19,7 @@ class Dataset:
     raw_dataset: pd.DataFrame
     metadata: pd.DataFrame
     data: pd.DataFrame
+    batch_size: int
 
 
     @property
@@ -24,8 +27,9 @@ class Dataset:
         return self.raw_dataset.metadata['platform_id'][0]
 
 
-    def __init__(self, id):
+    def __init__(self, id, batch_size=20):
         self.id = id
+        self.batch_size = batch_size
 
 
     def load_raw_data(self, cache_dir='./data/geo_cache'):
@@ -36,11 +40,24 @@ class Dataset:
         self.raw_dataset = gse
 
 
-    def process(self):
+    def process(self, recompute_data=False, recompute_metadata=False):
+        logging.info(f'Processing dataset {self.id}')
+
+        self.load_raw_data()
+
         platform = Platform(self.platform_id)
 
-        self.data = platform.process(self)
-        self.metadata = self.process_metadata()
+        if self.data_in_db() and not recompute_data:
+            logging.info(f'Dataset {self.id} data already in database, skipping')
+        else:
+            self.data = platform.process(self)
+            self.persist()
+
+        if self.metadata_in_db() and not recompute_metadata:
+            logging.info(f'Dataset {self.id} metadata already in database, skipping')
+        else:
+            self.metadata = self.process_metadata()
+            self.persist_metadata()
 
 
     def process_metadata(self):
@@ -48,17 +65,40 @@ class Dataset:
         # processor = self.get_metadata_processor()
         processor = GPTMetadataProcessor()
 
-        return processor.process(self.raw_dataset.phenotype_data)
+        metadata_batches = [self.raw_dataset.phenotype_data[i:i + self.batch_size] for i in range(0, len(self.raw_dataset.phenotype_data), self.batch_size)]
+
+        metadata = pd.DataFrame()
+        for batch in metadata_batches:
+            batch_metadata_str = processor.process(batch)
+            batch_metadata_buf = StringIO(batch_metadata_str)
+            batch_metadata_df = pd.read_csv(batch_metadata_buf)
+
+            metadata = pd.concat([metadata, batch_metadata_df])
+
+        return metadata
 
 
     def persist(self):
         logging.info(f'Saving dataset {self.id}')
 
         self.data.to_parquet(f'./db/{self.id}.parquet')
-        self.metadata.to_parquet(f'./db/{self.id}_metadata_gpt.parquet')
+
+
+    def persist_metadata(self):
+        logging.info(f'Saving metadata for dataset {self.id}')
+
+        self.metadata.to_csv(f'./db/{self.id}_metadata.csv', index=False)
 
 
     def get_metadata_processor(self):
         class_ = getattr(ibd.core.data_processing.metadata_processors, f'{self.id}_MetadataProcessor')
 
         return class_()
+    
+
+    def data_in_db(self):
+        return os.path.exists(f'./db/{self.id}.parquet')
+    
+
+    def metadata_in_db(self):
+        return os.path.exists(f'./db/{self.id}_metadata.csv')
