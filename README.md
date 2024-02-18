@@ -29,7 +29,7 @@ I also implemented a diagnostic model (0.88 CV AUC) to see if maybe some of the 
 Semi-supervised learning with additional 450 samples without response doesn't improve the performance at all, but it is probably due to poor normalization, because we're adding many new datasets.
 That's why I think it's time to stop playing around with the model, taking a few steps back, and improving the previous steps of the pipeline.
 
-## <a name="sq"></a>Side quest
+## <a name="sq"></a>The hydrogen peroxide hypothesis of UC
 More recently, I've been on a side quest, exploring the hydrogen peroxide hypothesis of UC.
 In a nutshell, the idea is that UC is caused by oxidative stress, which lead to too much hydrogen peroxide in the colon.
 This leads to the degradation of the tight junctions of the epithelial cells, which allows the bacteria to enter the lamina propria, and neutrophils to enter the lumen.
