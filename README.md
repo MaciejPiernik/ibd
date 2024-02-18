@@ -29,13 +29,15 @@ I also implemented a diagnostic model (0.88 CV AUC) to see if maybe some of the 
 Semi-supervised learning with additional 450 samples without response doesn't improve the performance at all, but it is probably due to poor normalization, because we're adding many new datasets.
 That's why I think it's time to stop playing around with the model, taking a few steps back, and improving the previous steps of the pipeline.
 
-## <a name="sq"></a>Side quest
+## <a name="sq"></a>The hydrogen peroxide hypothesis of UC
 More recently, I've been on a side quest, exploring the hydrogen peroxide hypothesis of UC.
-In a nutshell, the idea is that UC is caused by oxidative stress, which lead to too much hydrogen peroxide in the colon.
-This leads to the degradation of the tight junctions of the epithelial cells, which allows the bacteria to enter the lamina propria, and neutrophils to enter the lumen.
-This starts a vicious cycle, as the neutrophils produce more hydrogen peroxide, which attracts even more neutrophils.
-Moreover, the excess of hydrogen peroxide (which is cell-membrane permeable) can enter the epithelial cells and cause dama to the mitochondrial DNA, which disrupts the electron transport chain, and leads to even more hydrogen peroxide.
+In a nutshell, the idea is that UC is caused by oxidative stress, which leads to too much hydrogen peroxide in the colon.
+This leads to the degradation of the tight junctions of the epithelium, which allows the bacteria to enter the lamina propria, and the neutrophils to enter the lumen.
+Moreover, the hydrogen peroxide acts as a chemoattractant for the neutrophils, so it recruits even more of them.
+This starts a vicious cycle, as the neutrophils produce more hydrogen peroxide, which attracts even more neutrophils...
+Moreover, the excess of hydrogen peroxide (which is cell-membrane permeable) can enter the epithelial cells and cause damage to the mitochondrial DNA, which disrupts the electron transport chain, and leads to even more ROS.
 This is a very interesting hypothesis, and I'm currently trying to find a way to test it using the data I have.
+My first idea is to look for genes that are involved in redox reactions, and see if they are differentially expressed in UC patients.
 
 ## Datasets
 

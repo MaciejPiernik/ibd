@@ -5,9 +5,9 @@ import logging
 
 import pandas as pd
 
-import ibd.core.data_processing.metadata_processors
+import ibd.core.data.processing.metadata_processors
 
-from ibd.core.data_processing.gpt_metadata_processor import GPTMetadataProcessor
+from ibd.core.data.processing.gpt_metadata_processor import GPTMetadataProcessor
 from ibd.core.platforms.Platform import Platform
 
 

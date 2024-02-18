@@ -4,7 +4,7 @@ import pandas as pd
 
 from dotenv import load_dotenv
 
-from ibd.core.data_structures.Dataset import Dataset
+from ibd.core.data.structures.Dataset import Dataset
 from ibd.experiments.Experiment import Experiment
 
 logging.basicConfig(level=logging.INFO)
