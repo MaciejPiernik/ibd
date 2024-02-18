@@ -7,6 +7,8 @@ But I still can't wrap my head around the fact that currently patients are treat
 That's why, we're starting with the problem of drug response prediction.
 
 ## Current status
+I'm currently on a [side quest](#sq), explorint the hydrogen peroxide hypothesis of UC.
+
 So far, I've found ~2500 samples of expression data from mucosal biopsies of IBD patients, spanning across 32 datasets and 13 different platforms (see [Datsets](#datasets)).
 All of the datasets collected so far are from the Gene Expression Omnibus (GEO).
 To analyze this data together, I've implemented a data processing pipeline for 3 platforms and several datasets, allowing me to play around with ~1k samples.
@@ -26,6 +28,14 @@ I also implemented a diagnostic model (0.88 CV AUC) to see if maybe some of the 
 
 Semi-supervised learning with additional 450 samples without response doesn't improve the performance at all, but it is probably due to poor normalization, because we're adding many new datasets.
 That's why I think it's time to stop playing around with the model, taking a few steps back, and improving the previous steps of the pipeline.
+
+## <a name="sq"></a>Side quest
+More recently, I've been on a side quest, exploring the hydrogen peroxide hypothesis of UC.
+In a nutshell, the idea is that UC is caused by oxidative stress, which lead to too much hydrogen peroxide in the colon.
+This leads to the degradation of the tight junctions of the epithelial cells, which allows the bacteria to enter the lamina propria, and neutrophils to enter the lumen.
+This starts a vicious cycle, as the neutrophils produce more hydrogen peroxide, which attracts even more neutrophils.
+Moreover, the excess of hydrogen peroxide (which is cell-membrane permeable) can enter the epithelial cells and cause dama to the mitochondrial DNA, which disrupts the electron transport chain, and leads to even more hydrogen peroxide.
+This is a very interesting hypothesis, and I'm currently trying to find a way to test it using the data I have.
 
 ## Datasets
 
@@ -83,6 +93,9 @@ Here's the same plot, but with outliers removed.
 I just found the [ARCHS4 database](https://maayanlab.cloud/archs4/index.html), which contains over 130k samples of human gene expression, all uniformly processed!
 
 ## Roadmap
+
+### Side quest
+- The hydrogen peroxide hypothesis of UC
 
 ### Next steps
 - More work on normalization!!!
