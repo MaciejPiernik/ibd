@@ -31,3 +31,5 @@ def read_all_metadata(data_dir: str) -> pd.DataFrame:
 
         # append to dfs
         metadata = pd.concat([metadata, df])
+
+    return metadata
