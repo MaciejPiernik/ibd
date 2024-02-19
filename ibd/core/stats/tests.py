@@ -22,7 +22,6 @@ def are_ttest_conditions_satisfied(group1, group2, group3=None, alpha=0.05):
     return p_value1 > alpha and p_value2 > alpha and p_value3 > alpha and p_value > alpha
 
 
-
 def test_multiple_groups(data, class_column, alpha = 0.05):
     groups = []
     for group in data[class_column].unique():
@@ -56,6 +55,7 @@ def test_multiple_groups(data, class_column, alpha = 0.05):
             tukey_results = pairwise_tukeyhsd(data[feature], data[class_column])
             print(f"\nTukey's test results for {feature}:")
             print(tukey_results)
+
 
 def test_two_groups(data, group_column, alpha = 0.05):
     results = {}
@@ -92,6 +92,9 @@ def test_two_groups(data, group_column, alpha = 0.05):
 
     if not found:
         print('No significant differences found')
+
+    return sorted_results
+
 
 def test_paired_data(data, class_column, alpha = 0.05):
     results = {}
