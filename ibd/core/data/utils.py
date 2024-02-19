@@ -2,7 +2,7 @@ import os
 import pandas as pd
 
 
-def read_all_datasets(data_dir: str) -> pd.DataFrame:
+def read_all_datasets(data_dir: str, dropna=True) -> pd.DataFrame:
     db = pd.DataFrame()
     dataset_label = pd.Series(name='dataset')
     for filename in os.listdir(data_dir):
@@ -15,7 +15,8 @@ def read_all_datasets(data_dir: str) -> pd.DataFrame:
         tmp = pd.Series([filename[:-8]] * len(df), index=df.index, name='dataset')
         dataset_label = pd.concat([dataset_label, tmp])
 
-    db = db.dropna(axis=1)
+    if dropna:
+        db = db.dropna(axis=1)
 
     return db, dataset_label
 
