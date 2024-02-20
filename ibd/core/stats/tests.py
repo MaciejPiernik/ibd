@@ -63,8 +63,8 @@ def test_two_groups(data, group_column, alpha = 0.05):
     classes = np.sort(data[group_column].unique())
     
     for column in columns_of_interest:
-        group1_data = data[column].loc[data[group_column] == classes[0]]
-        group2_data = data[column].loc[data[group_column] == classes[1]]
+        group1_data = data[column].loc[data[group_column] == classes[0]].dropna()
+        group2_data = data[column].loc[data[group_column] == classes[1]].dropna()
 
         if len(group1_data) < 3 or len(group2_data) < 3:
             continue

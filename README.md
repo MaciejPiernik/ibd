@@ -1,5 +1,13 @@
 # IBD
 
+## Table of contents
+- [Intro](#intro)
+- [Current status](#current-status)
+    - [Side quest: the hydrogen peroxide hypothesis of UC](#side-quest-the-hydrogen-peroxide-hypothesis-of-uc)
+- [Datasets](#datasets)
+- [Roadmap](#roadmap)
+- [Setup](#setup)
+
 ## Intro
 The goal of this project if to figure out Inflammatory Bowel Diseases (IBD).
 I do realize that the problem is very complex and requires several breakthroughs in immunology, microbiology, drug design, diagnostics, and probably many other fields.
@@ -7,8 +15,6 @@ But I still can't wrap my head around the fact that currently patients are treat
 That's why, we're starting with the problem of drug response prediction.
 
 ## Current status
-I'm currently on a [side quest](#sq), explorint the hydrogen peroxide hypothesis of UC.
-
 So far, I've found ~2500 samples of expression data from mucosal biopsies of IBD patients, spanning across 32 datasets and 13 different platforms (see [Datsets](#datasets)).
 All of the datasets collected so far are from the Gene Expression Omnibus (GEO).
 To analyze this data together, I've implemented a data processing pipeline for 3 platforms and several datasets, allowing me to play around with ~1k samples.
@@ -29,7 +35,7 @@ I also implemented a diagnostic model (0.88 CV AUC) to see if maybe some of the 
 Semi-supervised learning with additional 450 samples without response doesn't improve the performance at all, but it is probably due to poor normalization, because we're adding many new datasets.
 That's why I think it's time to stop playing around with the model, taking a few steps back, and improving the previous steps of the pipeline.
 
-## <a name="sq"></a>The hydrogen peroxide hypothesis of UC
+### Side quest: the hydrogen peroxide hypothesis of UC
 More recently, I've been on a side quest, exploring the hydrogen peroxide hypothesis of UC.
 In a nutshell, the idea is that UC is caused by oxidative stress, which leads to too much hydrogen peroxide in the colon.
 This leads to the degradation of the tight junctions of the epithelium, which allows the bacteria to enter the lamina propria, and the neutrophils to enter the lumen.
