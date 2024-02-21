@@ -61,6 +61,10 @@ def test_two_groups(data, group_column, alpha = 0.05):
     results = {}
     columns_of_interest = data.drop(group_column, axis=1).columns
     classes = np.sort(data[group_column].unique())
+
+    if len(classes) != 2:
+        print('Only two classes are supported')
+        return
     
     for column in columns_of_interest:
         group1_data = data[column].loc[data[group_column] == classes[0]].dropna()
