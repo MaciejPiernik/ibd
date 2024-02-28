@@ -24,11 +24,11 @@ def read_all_datasets(data_dir: str, dropna=True) -> pd.DataFrame:
 def read_all_metadata(data_dir: str) -> pd.DataFrame:
     metadata = pd.DataFrame()
     for filename in os.listdir(data_dir):
-        if not filename.endswith('_metadata.parquet'):
+        if not filename.endswith('_metadata.csv'):
             continue
 
         # read csv
-        df = pd.read_parquet(os.path.join(data_dir, filename))
+        df = pd.read_csv(os.path.join(data_dir, filename), index_col=0)
 
         # append to dfs
         metadata = pd.concat([metadata, df])

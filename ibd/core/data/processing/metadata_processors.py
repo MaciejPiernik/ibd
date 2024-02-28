@@ -32,6 +32,9 @@ class GSE11223_MetadataProcessor:
         TREATMENT = None
         RESPONSE = None
         TIME_OF_BIOPSY = None
+        TISSUE = 'source_name_ch1'
+        INFLAMMATION = 'source_name_ch1'
+        MAYO_SCORE = None
 
         result = pd.DataFrame()
 
@@ -40,6 +43,9 @@ class GSE11223_MetadataProcessor:
         result['treatment'] = None
         result['response'] = None
         result['time_of_biopsy'] = None
+        result['tissue'] = metadata[TISSUE].map(lambda x: x.split(' ')[-1])
+        result['inflammation'] = metadata[INFLAMMATION].map(lambda x: x.split(' ')[1])
+        result['mayo_score'] = None
 
         return result
 

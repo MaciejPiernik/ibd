@@ -27,7 +27,7 @@ class Dataset:
         return self.raw_dataset.metadata['platform_id'][0]
 
 
-    def __init__(self, id, batch_size=20):
+    def __init__(self, id, batch_size=None):
         self.id = id
         self.batch_size = batch_size
 
@@ -62,18 +62,20 @@ class Dataset:
 
     def process_metadata(self):
         logging.info(f'Processing metadata for dataset {self.id}')
-        # processor = self.get_metadata_processor()
-        processor = GPTMetadataProcessor()
+        processor = self.get_metadata_processor()
 
-        metadata_batches = [self.raw_dataset.phenotype_data[i:i + self.batch_size] for i in range(0, len(self.raw_dataset.phenotype_data), self.batch_size)]
+        if self.batch_size is None:
+            metadata = processor.process(self.raw_dataset.phenotype_data)
+        else:
+            metadata_batches = [self.raw_dataset.phenotype_data[i:i + self.batch_size] for i in range(0, len(self.raw_dataset.phenotype_data), self.batch_size)]
 
-        metadata = pd.DataFrame()
-        for batch in metadata_batches:
-            batch_metadata_str = processor.process(batch)
-            batch_metadata_buf = StringIO(batch_metadata_str)
-            batch_metadata_df = pd.read_csv(batch_metadata_buf)
+            metadata = pd.DataFrame()
+            for batch in metadata_batches:
+                batch_metadata_str = processor.process(batch)
+                batch_metadata_buf = StringIO(batch_metadata_str)
+                batch_metadata_df = pd.read_csv(batch_metadata_buf)
 
-            metadata = pd.concat([metadata, batch_metadata_df])
+                metadata = pd.concat([metadata, batch_metadata_df])
 
         return metadata
 
@@ -87,11 +89,11 @@ class Dataset:
     def persist_metadata(self):
         logging.info(f'Saving metadata for dataset {self.id}')
 
-        self.metadata.to_csv(f'./db/{self.id}_metadata.csv', index=False)
+        self.metadata.to_csv(f'./db/{self.id}_metadata.csv')
 
 
     def get_metadata_processor(self):
-        class_ = getattr(ibd.core.data_processing.metadata_processors, f'{self.id}_MetadataProcessor')
+        class_ = getattr(ibd.core.data.processing.metadata_processors, f'{self.id}_MetadataProcessor')
 
         return class_()
     
