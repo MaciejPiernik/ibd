@@ -45,6 +45,11 @@ Moreover, the excess of hydrogen peroxide (which is cell-membrane permeable) can
 This is a very interesting hypothesis, and I'm currently trying to find a way to test it using the data I have.
 My first idea is to look for genes that are involved in redox reactions, and see if they are differentially expressed in UC patients.
 
+Wow, wow, wow, wow!!!
+The results are in and it is crystal clear that Mitochondrial Fatty Acid Oxidation is concistently downregulated in UC patients!
+I tested it on all datasets combined and on each dataset separately, and it's always the same!
+idk - maybe it's a well known fact, but I'm really excited about it!
+
 ## Datasets
 
 Accession number|Platform|No samples|Disease|Treatment|Processed
