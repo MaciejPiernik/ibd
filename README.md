@@ -48,7 +48,6 @@ My first idea is to look for genes that are involved in redox reactions, and see
 Wow, wow, wow, wow!!!
 The results are in and it is crystal clear that Mitochondrial Fatty Acid Oxidation is concistently downregulated in UC patients!
 Some combinations of the following genes are significantly downregulated in UC patients across all datasets.
-
 These genes are involved in the following processes:
 - ACSF2 is involved in the activation of fatty acids,
 - CPT1A is involved in the transport of acylcarnitines from the cytoplasm through the outer mitochondrial membrane,
