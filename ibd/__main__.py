@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 
 from ibd.core.data.structures.Dataset import Dataset
 from ibd.experiments.Experiment import Experiment
+from pathlib import Path
 
 logging.basicConfig(level=logging.INFO)
 
@@ -22,6 +23,9 @@ def cli():
 @click.option('--recompute_data', '-r', help='Recompute data', is_flag=True, default=False)
 @click.option('--recompute_metadata', '-m', help='Recompute metadata', is_flag=True, default=False)
 def run_pipeline(datasets, recompute_data, recompute_metadata):
+    db_path = Path("./db")
+    if not db_path.exists():
+        db_path.mkdir(parents=True)
     logging.info('Running data processing pipeline')
 
     daq = pd.read_csv('./data/DAQ.csv', sep=';')
