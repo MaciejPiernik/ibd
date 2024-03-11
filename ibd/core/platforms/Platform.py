@@ -35,7 +35,7 @@ class Platform:
 
         expr_df = expr_df.transpose().join(ids, how='inner').set_index(ids.name).transpose()
 
-        expr_df = expr_df.groupby(expr_df.columns, axis=1).mean()
+        expr_df = expr_df.T.groupby(expr_df.columns ).mean()
 
         return expr_df
     
