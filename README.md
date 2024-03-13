@@ -62,6 +62,22 @@ These genes are involved in the following processes:
 - SLC22A5 encodes OCT2, involved in the transport of carnitine into the cell,
 - SLC25A20 encodes CACT - carnitine-acylcarnitine translocase.
 
+Ok - evidence only keeps piling up despite my best efforts to disprove it.
+There's still one weird dataset (GSE48634) which yields only 6, totally random differentially expressed genes, despite being currently the largest dataset.
+However, after deeper inspection, some of the samples actually come from the ileum, not the colon.
+I'll deal with it later.
+
+After expanding the analysis to all differentially expressed genes (not just the arbitrary top 500), I've also found that there are actually 71 total appearances of the above genes in the differentially expressed genes in UC patients, however, 6 of them are upregulated.
+When I looked at these overexpressed genes, I've found that they are all consistently overexpressed across all datasets and they come from the same family: ACSL1, ACSL3, and ACSL4.
+I don't know what that means yet, but it's definitely interesting!
+
+Given all of the above, I'm starting to have less and less doubt that the mitochondrial fatty acid oxidation is altered in UC patients.
+How exactly?
+Why?
+What does it mean?
+How can we use it?
+I don't know, but I'm going to find out.
+
 ## Datasets
 
 Accession number|Platform|No samples|Disease|Treatment|Processed
@@ -76,7 +92,7 @@ GSE87473|GPL13158|127|UC, control||Combination of GSE87465 and GSE87466
 GSE3629|GPL570|121|UC, colorectal cancer||Yes
 GSE59071|GPL6244|116|CD, UC||Subset of GSE75214
 GSE23597|GPL570|113|UC|Infliximab, Vedolizumab|Yes
-GSE87466|GPL13158|108|UC, control||Yes
+GSE87466|GPL13158|108|UC, control||Subset of GSE92415
 GSE16879|GPL570|73|CD, UC, control|Infliximab|Yes
 GSE10616|GPL5760|58|CD, UC, control||
 GSE13367|GPL570|56|UC, control||
