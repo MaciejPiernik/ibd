@@ -45,38 +45,28 @@ Moreover, the excess of hydrogen peroxide (which is cell-membrane permeable) can
 This is a very interesting hypothesis, and I'm currently trying to find a way to test it using the data I have.
 My first idea is to look for genes that are involved in redox reactions, and see if they are differentially expressed in UC patients.
 
-Wow, wow, wow, wow!!!
-The results are in and it is crystal clear that Mitochondrial Fatty Acid Oxidation is concistently downregulated in UC patients!
-Some combinations of the following genes are significantly downregulated in UC patients across all datasets.
-They appear 53 times across all differentially expressed genes in UC patients and are always downregulated!
-ALWAYS!
+The results are in and they strongly suggest that Mitochondrial Fatty Acid Oxidation is concistently disrupted in UC patients.
+Some combinations of the following genes are significantly different in UC patients across all datasets.
+They appear 71 times across all differentially expressed genes in UC patients.
 These genes are involved in the following processes:
 - ACSF2 is involved in the activation of fatty acids,
 - CPT1A is involved in the transport of acylcarnitines from the cytoplasm through the outer mitochondrial membrane,
 - CPT2 is involved in the transport of acylcarnitines from the intermembrane space through the inner mitochondrial membrane to the mitochondrial matrix,
 - ECI1 is involved in the beta-oxidation of unsaturated fatty acids (?),
-- HADHA and HADHB are involved in the beta-oxidation of long-chain fatty acids,
-- ACADM is involved in the beta-oxidation of medium-chain fatty acids,
-- HADH is involved in the beta-oxidation of short-chain fatty acids,
+- EHHADH, HADH, HADHA, HADHB, ACADM, and ACADS are involved in the beta-oxidation of various lengths of fatty acids,
+- ACSL1, ACSL3, ACSL4 - acyl-CoA synthetases, which take part in converting the long chains of fatty acid "strings" together with CoenzymeA into Acyl CoA, which can then be "joined" with carnitine to produce acylarnitine, which is ready for the transport through the mitochondrial membranes,
 - SCP2 is involved in the transport of fatty acids from the cytoplasm to the peroxisome (?),
 - SLC22A5 encodes OCT2, involved in the transport of carnitine into the cell,
-- SLC25A20 encodes CACT - carnitine-acylcarnitine translocase.
+- SLC25A20 encodes CACT - carnitine-acylcarnitine translocase,
+- PECR - ?.
 
-Ok - evidence only keeps piling up despite my best efforts to disprove it.
 There's still one weird dataset (GSE48634) which yields only 6, totally random differentially expressed genes, despite being currently the largest dataset.
 However, after deeper inspection, some of the samples actually come from the ileum, not the colon.
 I'll deal with it later.
 
 After expanding the analysis to all differentially expressed genes (not just the arbitrary top 500), I've also found that there are actually 71 total appearances of the above genes in the differentially expressed genes in UC patients, however, 6 of them are upregulated.
 When I looked at these overexpressed genes, I've found that they are all consistently overexpressed across all datasets and they come from the same family: ACSL1, ACSL3, and ACSL4.
-I don't know what that means yet, but it's definitely interesting!
-
-Given all of the above, I'm starting to have less and less doubt that the mitochondrial fatty acid oxidation is altered in UC patients.
-How exactly?
-Why?
-What does it mean?
-How can we use it?
-I don't know, but I'm going to find out.
+I don't know what that means yet.
 
 ## Datasets
 
