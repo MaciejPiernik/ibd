@@ -68,6 +68,13 @@ After expanding the analysis to all differentially expressed genes (not just the
 When I looked at these overexpressed genes, I've found that they are all consistently overexpressed across all datasets and they come from the same family: ACSL1, ACSL3, and ACSL4.
 I don't know what that means yet.
 
+Here is a ranking of the genes by their average position across all datasets they appear in ('mean', the lower the better) + the number of times they appear across all datasets ('count', the higher the better):
+
+![image info](results/genes.png)
+
+I would completely discard the genes that appear only once, because they are vary uncertain.
+Obviously, the most certain genes are the ones with the lowest mean and the highest count and these are the ones we should focus on first.
+
 ## Datasets
 
 Accession number|Platform|No samples|Disease|Treatment|Processed
