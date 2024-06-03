@@ -1,0 +1,52 @@
+Gene_set	Term	Overlap	P-value	Adjusted P-value	Old P-value	Old Adjusted P-value	Odds Ratio	Combined Score	Genes
+WikiPathway_2023_Human	Allograft Rejection WP2328	4/90	2.635753e-06	1.344234e-04	0	0	5.140052e+01	6.603086e+02	HLA-DRA;HLA-DRB1;HLA-DQB1;HLA-DPA1
+WikiPathway_2023_Human	Ebola Virus Infection In Host WP4217	4/129	1.104168e-05	2.815628e-04	0	0	3.529422e+01	4.028424e+02	HLA-DRA;HLA-DRB1;HLA-DQB1;HLA-DPA1
+WikiPathway_2023_Human	Macrophage Markers WP4146	2/9	4.138641e-05	7.035689e-04	0	0	2.853000e+02	2.879407e+03	CD74;LYZ
+WikiPathway_2023_Human	Pathogenesis Of SARS CoV 2 Mediated By Nsp9 Nsp10 Complex WP4884	2/21	2.395010e-04	3.053637e-03	0	0	1.050474e+02	8.757750e+02	HLA-DRA;HLA-DRB1
+WikiPathway_2023_Human	Cell Interactions Of The Pancreatic Cancer Microenvironment WP5284	2/26	3.694247e-04	3.140110e-03	0	0	8.314167e+01	6.571155e+02	HLA-DRA;HLA-DRB1
+WikiPathway_2023_Human	Cytokines And Inflammatory Response WP530	2/26	3.694247e-04	3.140110e-03	0	0	8.314167e+01	6.571155e+02	HLA-DRA;HLA-DRB1
+WikiPathway_2023_Human	Zinc Homeostasis WP3529	2/36	7.113648e-04	5.182801e-03	0	0	5.865882e+01	4.251782e+02	MT1G;MT1E
+WikiPathway_2023_Human	Pancreatic Cancer Subtypes WP5390	2/48	1.263552e-03	8.055142e-03	0	0	4.333043e+01	2.891799e+02	LGALS4;LYZ
+WikiPathway_2023_Human	Copper Homeostasis WP3286	2/51	1.425369e-03	8.077092e-03	0	0	4.067143e+01	2.665331e+02	MT1G;MT1E
+WikiPathway_2023_Human	Network Map Of SARS CoV 2 Signaling Pathway WP5115	3/218	1.687934e-03	8.608461e-03	0	0	1.451383e+01	9.265993e+01	SAA1;HLA-DRA;HLA-DRB1
+WikiPathway_2023_Human	PPAR Signaling Pathway WP3942	2/67	2.445598e-03	1.133868e-02	0	0	3.063538e+01	1.842248e+02	FABP1;HMGCS2
+WikiPathway_2023_Human	T Cell Activation SARS CoV 2 WP5098	2/88	4.175495e-03	1.749424e-02	0	0	2.313023e+01	1.267195e+02	HLA-DRA;HLA-DRB1
+WikiPathway_2023_Human	Thyroid Hormones Production And Peripheral Downstream Signaling Effects WP4746	2/93	4.650876e-03	1.749424e-02	0	0	2.185385e+01	1.173704e+02	DUOXA2;DUOX2
+WikiPathway_2023_Human	Disorders In Ketone Body Synthesis WP5175	1/5	5.488389e-03	1.749424e-02	0	0	2.377857e+02	1.237703e+03	HMGCS2
+WikiPathway_2023_Human	Creatine Pathway WP5190	1/5	5.488389e-03	1.749424e-02	0	0	2.377857e+02	1.237703e+03	CKB
+WikiPathway_2023_Human	Ketone Bodies Synthesis And Degradation WP311	1/5	5.488389e-03	1.749424e-02	0	0	2.377857e+02	1.237703e+03	HMGCS2
+WikiPathway_2023_Human	Cancer Immunotherapy By CTLA4 Blockade WP4582	1/14	1.529518e-02	4.588553e-02	0	0	7.313187e+01	3.057071e+02	HLA-DRB1
+WikiPathway_2023_Human	Biomarkers For Pyrimidine Metabolism Disorders WP4584	1/15	1.637911e-02	4.640747e-02	0	0	6.790476e+01	2.792073e+02	CKB
+WikiPathway_2023_Human	Genes Associated With The Development Of Rheumatoid Arthritis WP5033	1/18	1.962407e-02	4.765844e-02	0	0	5.591317e+01	2.197946e+02	HLA-DRB1
+WikiPathway_2023_Human	Fatty Acid Transporters WP5061	1/18	1.962407e-02	4.765844e-02	0	0	5.591317e+01	2.197946e+02	FABP1
+WikiPathway_2023_Human	Proteoglycan Biosynthesis WP4784	1/18	1.962407e-02	4.765844e-02	0	0	5.591317e+01	2.197946e+02	SLC26A2
+WikiPathway_2023_Human	Urea Cycle And Metabolism Of Amino Groups WP497	1/21	2.285880e-02	5.299087e-02	0	0	4.751905e+01	1.795469e+02	CKB
+WikiPathway_2023_Human	PI3K AKT mTOR Vitamin D3 Signaling WP4141	1/22	2.393479e-02	5.307279e-02	0	0	4.525397e+01	1.689069e+02	HLA-DRA
+WikiPathway_2023_Human	Cancer Immunotherapy By PD 1 Blockade WP4585	1/23	2.500964e-02	5.314548e-02	0	0	4.319481e+01	1.593238e+02	HLA-DRB1
+WikiPathway_2023_Human	Thyroxine Thyroid Hormone Production WP1981	1/25	2.715595e-02	5.536915e-02	0	0	3.959127e+01	1.427724e+02	DUOX2
+WikiPathway_2023_Human	PPAR Alpha Pathway WP2878	1/26	2.822741e-02	5.536915e-02	0	0	3.800571e+01	1.355839e+02	FABP1
+WikiPathway_2023_Human	Glycerophospholipid Biosynthetic Pathway WP2533	1/30	3.250202e-02	6.139270e-02	0	0	3.275698e+01	1.122403e+02	PLA2G2A
+WikiPathway_2023_Human	Fatty Acids And Lipoproteins Transport In Hepatocytes WP5323	1/35	3.782003e-02	6.888649e-02	0	0	2.793277e+01	9.147749e+01	FABP1
+WikiPathway_2023_Human	miRNA Role In Immune Response In Sepsis WP4329	1/37	3.993942e-02	7.023829e-02	0	0	2.637831e+01	8.494847e+01	LCN2
+WikiPathway_2023_Human	Nucleotide Binding Oligomerization Domain NOD Pathway WP1433	1/41	4.416483e-02	7.150953e-02	0	0	2.373571e+01	7.405131e+01	DUOX2
+WikiPathway_2023_Human	Metabolic Reprogramming In Pancreatic Cancer WP5220	1/42	4.521841e-02	7.150953e-02	0	0	2.315563e+01	7.169565e+01	HMGCS2
+WikiPathway_2023_Human	Nuclear Receptors Meta Pathway WP2882	2/314	4.616915e-02	7.150953e-02	0	0	6.303205e+00	1.938515e+01	FABP1;SLC26A2
+WikiPathway_2023_Human	Cholesterol Biosynthesis Pathway In Hepatocytes WP5329	1/43	4.627087e-02	7.150953e-02	0	0	2.260317e+01	6.946504e+01	HMGCS2
+WikiPathway_2023_Human	Cholesterol Metabolism With Bloch And Kandutsch Russell Pathways WP4718	1/47	5.046968e-02	7.570452e-02	0	0	2.063354e+01	6.161964e+01	HMGCS2
+WikiPathway_2023_Human	Vitamin B12 Metabolism WP1533	1/50	5.360720e-02	7.811335e-02	0	0	1.936735e+01	5.667025e+01	SAA1
+WikiPathway_2023_Human	Cardiac Hypertrophic Response WP2795	1/55	5.881442e-02	8.249949e-02	0	0	1.756966e+01	4.978133e+01	PLA2G2A
+WikiPathway_2023_Human	11P11 2 Copy Number Variation Syndrome WP5348	1/56	5.985257e-02	8.249949e-02	0	0	1.724935e+01	4.857194e+01	HLA-DRA
+WikiPathway_2023_Human	Folate Metabolism WP176	1/68	7.222551e-02	9.693423e-02	0	0	1.415139e+01	3.718930e+01	SAA1
+WikiPathway_2023_Human	Glucocorticoid Receptor Pathway WP2880	1/70	7.427249e-02	9.712557e-02	0	0	1.373982e+01	3.572373e+01	SLC26A2
+WikiPathway_2023_Human	Disturbed Pathways In Duchenne Muscular Dystrophy WP5356	1/74	7.835353e-02	9.990076e-02	0	0	1.298434e+01	3.306495e+01	PLA2G2A
+WikiPathway_2023_Human	MicroRNAs In Cardiomyocyte Hypertrophy WP1544	1/83	8.747318e-02	1.088081e-01	0	0	1.155401e+01	2.815045e+01	PLA2G2A
+WikiPathway_2023_Human	Selenium Micronutrient Network WP15	1/86	9.049388e-02	1.098854e-01	0	0	1.114454e+01	2.677445e+01	SAA1
+WikiPathway_2023_Human	Amino Acid Metabolism WP3925	1/91	9.550717e-02	1.132759e-01	0	0	1.052275e+01	2.471325e+01	HMGCS2
+WikiPathway_2023_Human	CKAP4 Signaling Pathway Map WP5322	1/109	1.133375e-01	1.313685e-01	0	0	8.761023e+00	1.907612e+01	CD74
+WikiPathway_2023_Human	Spinal Cord Injury WP2431	1/119	1.230978e-01	1.395108e-01	0	0	8.014528e+00	1.678864e+01	PLA2G2A
+WikiPathway_2023_Human	Male Infertility WP4673	1/145	1.479968e-01	1.640834e-01	0	0	6.558862e+00	1.253113e+01	HLA-DRA
+WikiPathway_2023_Human	Primary Ovarian Insufficiency WP5316	1/170	1.713007e-01	1.858795e-01	0	0	5.581572e+00	9.847763e+00	HLA-DRB1
+WikiPathway_2023_Human	Ras Signaling WP4223	1/184	1.840838e-01	1.934820e-01	0	0	5.150924e+00	8.717239e+00	PLA2G2A
+WikiPathway_2023_Human	Vitamin D Receptor Pathway WP2877	1/186	1.858945e-01	1.934820e-01	0	0	5.094723e+00	8.572259e+00	HLA-DRB1
+WikiPathway_2023_Human	Ciliary Landscape WP4352	1/213	2.099669e-01	2.141662e-01	0	0	4.439802e+00	6.929667e+00	LCN2
+WikiPathway_2023_Human	IL 24 Signaling Pathway WP5413	1/232	2.264978e-01	2.264978e-01	0	0	4.070707e+00	6.045081e+00	HLA-DRB1
