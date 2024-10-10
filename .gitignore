@@ -9,5 +9,7 @@ db/
 ibd/notebooks/*.csv
 data/Baza danych_CD.xlsx
 data/cd_data.csv
+data/wgs.csv
 .env
 results/enrichr_kegg/
+data/wgs_all.csv
