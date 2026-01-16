@@ -13,3 +13,5 @@ data/wgs.csv
 .env
 results/enrichr_kegg/
 data/wgs_all.csv
+ibd-env/
+key.txt

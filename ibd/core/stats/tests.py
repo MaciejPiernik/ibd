@@ -57,13 +57,14 @@ def test_multiple_groups(data, class_column, alpha = 0.05):
             print(tukey_results)
 
 
-def test_two_groups(data, group_column, alpha = 0.05):
+def test_two_groups(data, group_column, alpha = 0.05, verbose=False):
     results = {}
     columns_of_interest = data.drop(group_column, axis=1).columns
     classes = np.sort(data[group_column].unique())
 
     if len(classes) != 2:
-        print('Only two classes are supported')
+        if verbose:
+            print('Only two classes are supported')
         return
     
     for column in columns_of_interest:
@@ -87,15 +88,18 @@ def test_two_groups(data, group_column, alpha = 0.05):
     sorted_results = sorted(results.items(), key=lambda x: x[1])
 
     found = False
-    print(f'Test results for {group_column}:')
-    print(f'Group counts: {len(group1_data)} | {len(group2_data)}')
+    if verbose:
+        print(f'Test results for {group_column}:')
+        print(f'Group counts: {len(group1_data)} | {len(group2_data)}')
     for feature, (p_value, meandiff, test_type) in sorted_results:
         if p_value < alpha:
             found = True
-            print(f"- {feature}: [{test_type}] p-value = {np.round(p_value, 4)}; mean difference = {np.round(meandiff, 4)}")
+            if verbose:
+                print(f"- {feature}: [{test_type}] p-value = {np.round(p_value, 4)}; mean difference = {np.round(meandiff, 4)}")
 
     if not found:
-        print('No significant differences found')
+        if verbose:
+            print('No significant differences found')
 
     return sorted_results
 
