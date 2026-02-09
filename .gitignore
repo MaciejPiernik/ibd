@@ -1,17 +1,17 @@
 geo_cache/
 geo_datasets/
 papers/
+paper/
 .Rhistory
 __pycache__/
 /.vscode/
 db/
 .DS_Store
 ibd/notebooks/*.csv
-data/Baza danych_CD.xlsx
-data/cd_data.csv
-data/wgs.csv
+data/
 .env
 results/enrichr_kegg/
 data/wgs_all.csv
 ibd-env/
 key.txt
+ibd.egg-info/

@@ -29,7 +29,7 @@ def test_multiple_groups(data, class_column, alpha = 0.05):
 
     columns_of_interest = data.drop(class_column, axis=1).columns
 
-    # Perform ANOVA for each MRI feature
+    # Perform ANOVA for each feature
     results = {}
     for column in columns_of_interest:
 
