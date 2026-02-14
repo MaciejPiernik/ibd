@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pathway Overlap Network Viewer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: #0a0e17;
+    color: #c8cdd8;
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  #container { position: relative; width: 100%; height: 100vh; }
+  svg { width: 100%; height: 100%; display: block; }
+
+  /* ── Landing / upload screen ── */
+  #upload-screen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    background: #0a0e17;
+  }
+
+  #upload-screen h1 {
+    font-size: 22px;
+    font-weight: 500;
+    color: #e0e4ec;
+    margin-bottom: 6px;
+  }
+
+  #upload-screen .sub {
+    font-size: 13px;
+    color: #5a6377;
+    margin-bottom: 32px;
+  }
+
+  .drop-zone {
+    width: 420px;
+    height: 180px;
+    border: 2px dashed rgba(91, 141, 239, 0.35);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: rgba(91, 141, 239, 0.7);
+    background: rgba(91, 141, 239, 0.06);
+  }
+
+  .drop-zone .icon {
+    font-size: 36px;
+    color: #5b8def;
+  }
+
+  .drop-zone .label {
+    font-size: 14px;
+    color: #7a8599;
+  }
+
+  .drop-zone .hint {
+    font-size: 11px;
+    color: #4a5568;
+  }
+
+  #file-input { display: none; }
+
+  .usage-hint {
+    margin-top: 28px;
+    max-width: 480px;
+    font-size: 12px;
+    color: #4a5568;
+    line-height: 1.6;
+    text-align: center;
+  }
+
+  .usage-hint code {
+    font-family: 'IBM Plex Mono', monospace;
+    background: rgba(91, 141, 239, 0.1);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #7a8599;
+    font-size: 11px;
+  }
+
+  /* ── Graph UI ── */
+  .controls {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 10;
+  }
+
+  .control-group {
+    background: rgba(15, 20, 32, 0.92);
+    border: 1px solid rgba(100, 116, 145, 0.2);
+    border-radius: 8px;
+    padding: 12px 16px;
+    backdrop-filter: blur(12px);
+  }
+
+  .control-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #7a8599;
+    margin-bottom: 6px;
+  }
+
+  .control-group input[type="range"] { width: 180px; accent-color: #5b8def; }
+
+  .control-group select {
+    background: #141a2a;
+    color: #c8cdd8;
+    border: 1px solid rgba(100,116,145,0.3);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-family: inherit;
+  }
+
+  .control-group .value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: #5b8def;
+  }
+
+  .btn-reload {
+    background: rgba(91,141,239,0.12);
+    border: 1px solid rgba(91,141,239,0.25);
+    color: #5b8def;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.15s;
+  }
+  .btn-reload:hover { background: rgba(91,141,239,0.22); }
+
+  .title-bar {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  .title-bar h1 { font-size: 16px; font-weight: 500; color: #e0e4ec; letter-spacing: 0.5px; }
+  .title-bar .subtitle { font-size: 11px; color: #5a6377; margin-top: 2px; }
+
+  .legend {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    background: rgba(15, 20, 32, 0.92);
+    border: 1px solid rgba(100, 116, 145, 0.2);
+    border-radius: 8px;
+    padding: 12px 16px;
+    backdrop-filter: blur(12px);
+    z-index: 10;
+  }
+
+  .legend-title {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #7a8599;
+    margin-bottom: 8px;
+  }
+
+  .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 12px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  .tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: rgba(10, 14, 23, 0.96);
+    border: 1px solid rgba(91, 141, 239, 0.3);
+    border-radius: 8px;
+    padding: 12px 16px;
+    max-width: 360px;
+    font-size: 12px;
+    line-height: 1.5;
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.15s;
+    backdrop-filter: blur(12px);
+  }
+
+  .tooltip .tt-name { font-weight: 600; font-size: 13px; color: #e0e4ec; margin-bottom: 6px; line-height: 1.3; }
+  .tooltip .tt-row { display: flex; justify-content: space-between; gap: 16px; }
+  .tooltip .tt-label { color: #7a8599; }
+  .tooltip .tt-value { font-family: 'IBM Plex Mono', monospace; color: #5b8def; }
+  .tt-up { color: #ef6b6b; }
+  .tt-down { color: #4ea8de; }
+
+  .stats {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    background: rgba(15, 20, 32, 0.92);
+    border: 1px solid rgba(100, 116, 145, 0.2);
+    border-radius: 8px;
+    padding: 12px 16px;
+    backdrop-filter: blur(12px);
+    z-index: 10;
+    font-size: 12px;
+  }
+
+  .stats .stat-row { display: flex; justify-content: space-between; gap: 24px; margin-bottom: 2px; }
+  .stats .stat-label { color: #7a8599; }
+  .stats .stat-value { font-family: 'IBM Plex Mono', monospace; color: #c8cdd8; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div id="container">
+
+  <!-- Upload screen -->
+  <div id="upload-screen">
+    <h1>Pathway Overlap Network</h1>
+    <div class="sub">Load a graph JSON to visualize pathway relationships</div>
+    <div class="drop-zone" id="drop-zone">
+      <div class="icon">⬡</div>
+      <div class="label">Drop JSON here or click to browse</div>
+      <div class="hint">Expected format: { "nodes": [...], "edges": [...] }</div>
+    </div>
+    <input type="file" id="file-input" accept=".json">
+    <div class="usage-hint">
+      Generate the JSON with:<br>
+      <code>python build_pathway_graph.py --pathways sig.csv --leading-edge le.csv --genes genes.csv -o graph.json</code>
+    </div>
+  </div>
+
+  <!-- Graph UI (hidden until data loaded) -->
+  <div id="graph-ui" class="hidden">
+    <div class="title-bar">
+      <h1>Pathway Overlap Network</h1>
+      <div class="subtitle" id="subtitle">Gene overlap coefficient</div>
+    </div>
+
+    <div class="controls">
+      <div class="control-group">
+        <label>Min Edge Overlap <span class="value" id="threshold-val">0.33</span></label>
+        <input type="range" id="threshold" min="0" max="1" step="0.01" value="0.33">
+      </div>
+      <div class="control-group">
+        <label>Node Size by</label>
+        <select id="size-by">
+          <option value="absNes">|NES|</option>
+          <option value="nGenes">Gene count</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <button class="btn-reload" id="btn-reload">Load different file</button>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-title">Direction</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ef6b6b"></div> Upregulated</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#4ea8de"></div> Downregulated</div>
+      <div class="legend-title" style="margin-top:10px">Edge opacity = overlap coefficient</div>
+    </div>
+
+    <div class="stats" id="stats"></div>
+    <div class="tooltip" id="tooltip"></div>
+    <svg id="graph"></svg>
+  </div>
+
+</div>
+
+<script>
+// ── Colors ──
+const upColor = '#ef6b6b';
+const downColor = '#4ea8de';
+const upColorDim = 'rgba(239,107,107,0.15)';
+const downColorDim = 'rgba(78,168,222,0.15)';
+
+// ── File handling ──
+const uploadScreen = document.getElementById('upload-screen');
+const graphUI = document.getElementById('graph-ui');
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) loadFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files.length) loadFile(fileInput.files[0]); });
+document.getElementById('btn-reload').addEventListener('click', () => {
+  resetGraph();
+  graphUI.classList.add('hidden');
+  uploadScreen.classList.remove('hidden');
+  fileInput.value = '';
+});
+
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.nodes || !data.edges) throw new Error('Missing nodes or edges');
+      uploadScreen.classList.add('hidden');
+      graphUI.classList.remove('hidden');
+      initGraph(data);
+    } catch (err) {
+      alert('Invalid JSON: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ── Graph state ──
+let simulation = null;
+let nodes, allEdges, nodeById;
+let currentEdges = [];
+let edgeSel, nodeSel, labelSel;
+let highlightedNode = null;
+let g, svg, edgeGroup, nodeGroup, labelGroup;
+let radiusScaleNes, radiusScaleGenes;
+
+function resetGraph() {
+  if (simulation) { simulation.stop(); simulation = null; }
+  const svgEl = document.getElementById('graph');
+  while (svgEl.firstChild) svgEl.removeChild(svgEl.firstChild);
+  highlightedNode = null;
+}
+
+function getRadius(d, sizeBy) {
+  return sizeBy === 'nGenes' ? radiusScaleGenes(d.nGenes) : radiusScaleNes(d.absNes);
+}
+
+function initGraph(DATA) {
+  resetGraph();
+
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+
+  svg = d3.select('#graph').attr('viewBox', [0, 0, width, height]);
+  g = svg.append('g');
+
+  const zoom = d3.zoom().scaleExtent([0.2, 8]).on('zoom', e => g.attr('transform', e.transform));
+  svg.call(zoom);
+
+  nodes = DATA.nodes.map(d => ({...d}));
+  allEdges = DATA.edges.map(d => ({...d}));
+  nodeById = new Map(nodes.map(d => [d.id, d]));
+
+  // Subtitle
+  const libs = [...new Set(nodes.map(n => n.library))];
+  document.getElementById('subtitle').textContent =
+    libs.join(', ') + ' — Gene overlap coefficient';
+
+  // Scales
+  const nesExtent = d3.extent(nodes, d => d.absNes);
+  const geneExtent = d3.extent(nodes, d => d.nGenes);
+  radiusScaleNes = d3.scaleSqrt().domain(nesExtent).range([5, 22]);
+  radiusScaleGenes = d3.scaleSqrt().domain(geneExtent).range([5, 22]);
+
+  edgeGroup = g.append('g');
+  nodeGroup = g.append('g');
+  labelGroup = g.append('g');
+
+  simulation = d3.forceSimulation(nodes)
+    .force('charge', d3.forceManyBody().strength(-120))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('collision', d3.forceCollide().radius(d => getRadius(d, 'absNes') + 3))
+    .force('x', d3.forceX(width / 2).strength(0.03))
+    .force('y', d3.forceY(height / 2).strength(0.03))
+    .alphaDecay(0.02);
+
+  simulation.on('tick', () => {
+    if (edgeSel) edgeSel
+      .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+    if (nodeSel) nodeSel.attr('cx', d => d.x).attr('cy', d => d.y);
+    if (labelSel) labelSel.attr('x', d => d.x).attr('y', d => d.y);
+  });
+
+  // Click background to deselect
+  svg.on('click', () => { highlightedNode = null; resetHighlight(); tooltip.style('opacity', 0); });
+
+  updateGraph(parseFloat(thresholdSlider.value), sizeBySelect.value);
+}
+
+const tooltip = d3.select('#tooltip');
+const thresholdSlider = document.getElementById('threshold');
+const thresholdVal = document.getElementById('threshold-val');
+const sizeBySelect = document.getElementById('size-by');
+
+thresholdSlider.addEventListener('input', () => {
+  thresholdVal.textContent = parseFloat(thresholdSlider.value).toFixed(2);
+  updateGraph(parseFloat(thresholdSlider.value), sizeBySelect.value);
+});
+sizeBySelect.addEventListener('change', () => {
+  updateGraph(parseFloat(thresholdSlider.value), sizeBySelect.value);
+});
+
+function updateGraph(threshold, sizeBy) {
+  if (!nodes) return;
+
+  currentEdges = allEdges
+    .filter(d => d.weight >= threshold)
+    .map(d => ({
+      source: nodeById.get(d.source) || d.source,
+      target: nodeById.get(d.target) || d.target,
+      weight: d.weight,
+      shared: d.shared,
+    }));
+
+  const connectedIds = new Set();
+  currentEdges.forEach(e => {
+    connectedIds.add(typeof e.source === 'object' ? e.source.id : e.source);
+    connectedIds.add(typeof e.target === 'object' ? e.target.id : e.target);
+  });
+
+  // Edges
+  edgeSel = edgeGroup.selectAll('line').data(currentEdges, d => {
+    const s = typeof d.source === 'object' ? d.source.id : d.source;
+    const t = typeof d.target === 'object' ? d.target.id : d.target;
+    return `${s}-${t}`;
+  });
+  edgeSel.exit().remove();
+  edgeSel = edgeSel.enter().append('line').merge(edgeSel)
+    .attr('stroke', 'rgba(140,160,200,0.3)')
+    .attr('stroke-width', d => Math.max(0.5, d.weight * 2.5))
+    .attr('stroke-opacity', d => 0.1 + d.weight * 0.5);
+
+  // Nodes
+  nodeSel = nodeGroup.selectAll('circle').data(nodes, d => d.id);
+  nodeSel.exit().remove();
+  nodeSel = nodeSel.enter().append('circle')
+    .call(d3.drag()
+      .on('start', (e, d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+      .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
+      .on('end', (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }))
+    .on('mouseover', (e, d) => { if (highlightedNode === null) highlightNeighborhood(d, e); })
+    .on('mouseout', () => { if (highlightedNode === null) { resetHighlight(); tooltip.style('opacity', 0); } })
+    .on('click', (e, d) => {
+      e.stopPropagation();
+      if (highlightedNode === d.id) { highlightedNode = null; resetHighlight(); tooltip.style('opacity', 0); }
+      else { highlightedNode = d.id; highlightNeighborhood(d, e); }
+    })
+    .merge(nodeSel)
+    .attr('r', d => getRadius(d, sizeBy))
+    .attr('fill', d => d.direction === 'up' ? upColor : downColor)
+    .attr('stroke', 'rgba(255,255,255,0.15)')
+    .attr('stroke-width', 0.5)
+    .style('cursor', 'pointer');
+
+  // Labels
+  labelSel = labelGroup.selectAll('text').data(nodes, d => d.id);
+  labelSel.exit().remove();
+  labelSel = labelSel.enter().append('text').merge(labelSel)
+    .text(d => {
+      const r = getRadius(d, sizeBy);
+      if (r < 10) return '';
+      return d.label.length > 28 ? d.label.slice(0, 26) + '…' : d.label;
+    })
+    .attr('font-size', d => Math.max(7, Math.min(11, getRadius(d, sizeBy) * 0.55)))
+    .attr('fill', 'rgba(200,210,225,0.7)')
+    .attr('text-anchor', 'middle')
+    .attr('dy', d => getRadius(d, sizeBy) + 12)
+    .attr('font-family', "'IBM Plex Sans', sans-serif")
+    .style('pointer-events', 'none');
+
+  // Link force
+  simulation.force('link', d3.forceLink(currentEdges)
+    .id(d => d.id)
+    .distance(d => 80 * (1 - d.weight) + 20)
+    .strength(d => d.weight * 0.4));
+  simulation.force('collision').radius(d => getRadius(d, sizeBy) + 3);
+  simulation.alpha(0.5).restart();
+
+  // Stats
+  const isolates = nodes.filter(d => !connectedIds.has(d.id)).length;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat-row"><span class="stat-label">Nodes</span><span class="stat-value">${nodes.length}</span></div>
+    <div class="stat-row"><span class="stat-label">Edges</span><span class="stat-value">${currentEdges.length}</span></div>
+    <div class="stat-row"><span class="stat-label">Isolates</span><span class="stat-value">${isolates}</span></div>
+  `;
+}
+
+function getNeighborIds(nodeId) {
+  const ids = new Set();
+  currentEdges.forEach(e => {
+    const s = typeof e.source === 'object' ? e.source.id : e.source;
+    const t = typeof e.target === 'object' ? e.target.id : e.target;
+    if (s === nodeId) ids.add(t);
+    if (t === nodeId) ids.add(s);
+  });
+  return ids;
+}
+
+function highlightNeighborhood(d, event) {
+  const neighbors = getNeighborIds(d.id);
+  neighbors.add(d.id);
+
+  nodeSel.attr('fill', n => !neighbors.has(n.id) ? (n.direction === 'up' ? upColorDim : downColorDim) : (n.direction === 'up' ? upColor : downColor))
+    .attr('stroke', n => neighbors.has(n.id) ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.05)')
+    .attr('stroke-width', n => n.id === d.id ? 2 : 0.5);
+
+  edgeSel.attr('stroke-opacity', e => {
+    const s = typeof e.source === 'object' ? e.source.id : e.source;
+    const t = typeof e.target === 'object' ? e.target.id : e.target;
+    return (s === d.id || t === d.id) ? 0.7 : 0.03;
+  }).attr('stroke', e => {
+    const s = typeof e.source === 'object' ? e.source.id : e.source;
+    const t = typeof e.target === 'object' ? e.target.id : e.target;
+    return (s === d.id || t === d.id) ? 'rgba(180,200,240,0.6)' : 'rgba(140,160,200,0.3)';
+  });
+
+  labelSel.attr('fill', n => neighbors.has(n.id) ? 'rgba(220,225,235,0.9)' : 'rgba(200,210,225,0.15)');
+
+  const dirClass = d.direction === 'up' ? 'tt-up' : 'tt-down';
+  const arrow = d.direction === 'up' ? '↑' : '↓';
+  let rows = `
+    <div class="tt-row"><span class="tt-label">NES</span><span class="tt-value ${dirClass}">${arrow} ${d.nes.toFixed(2)}</span></div>
+    <div class="tt-row"><span class="tt-label">Sig. genes</span><span class="tt-value">${d.nGenes}</span></div>`;
+  if (d.datasets !== undefined)
+    rows += `<div class="tt-row"><span class="tt-label">Datasets</span><span class="tt-value">${d.datasets}</span></div>`;
+  if (d.I2 !== undefined)
+    rows += `<div class="tt-row"><span class="tt-label">I²</span><span class="tt-value">${d.I2}</span></div>`;
+  rows += `<div class="tt-row"><span class="tt-label">Neighbors</span><span class="tt-value">${neighbors.size - 1}</span></div>`;
+
+  tooltip.html(`<div class="tt-name">${d.fullTerm}</div>${rows}`)
+    .style('left', (event.pageX + 16) + 'px')
+    .style('top', (event.pageY - 20) + 'px')
+    .style('opacity', 1);
+}
+
+function resetHighlight() {
+  if (!nodeSel) return;
+  nodeSel.attr('fill', d => d.direction === 'up' ? upColor : downColor)
+    .attr('stroke', 'rgba(255,255,255,0.15)').attr('stroke-width', 0.5);
+  edgeSel.attr('stroke-opacity', d => 0.1 + d.weight * 0.5).attr('stroke', 'rgba(140,160,200,0.3)');
+  labelSel.attr('fill', 'rgba(200,210,225,0.7)');
+}
+</script>
+</body>
+</html>

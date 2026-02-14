@@ -1,5 +1,7 @@
+import logging
 import os
 import pandas as pd
+import numpy as np
 
 
 def read_all_datasets(data_dir: str, dropna=True) -> pd.DataFrame:
@@ -10,9 +12,16 @@ def read_all_datasets(data_dir: str, dropna=True) -> pd.DataFrame:
             continue
 
         df = pd.read_parquet(os.path.join(data_dir, filename))
+        dataset_name = filename[:-8]
+
+        # Auto-detect and fix non-log-transformed expression data
+        median_expr = df.median(axis=1).median()
+        if median_expr > 100:
+            logging.warning('%s appears non-log-transformed (median=%.1f). Applying log2(x+1).', dataset_name, median_expr)
+            df = np.log2(df + 1)
 
         db = pd.concat([db, df])
-        tmp = pd.Series([filename[:-8]] * len(df), index=df.index, name='dataset')
+        tmp = pd.Series([dataset_name] * len(df), index=df.index, name='dataset')
         dataset_label = pd.concat([dataset_label, tmp])
 
     if dropna:

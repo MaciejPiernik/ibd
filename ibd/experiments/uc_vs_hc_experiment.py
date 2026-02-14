@@ -1,23 +1,3 @@
-"""
-UC vs Healthy Control meta-analysis experiment.
-
-Per-dataset: Welch's t-test + Hedges' g for each gene, GSEA prerank for pathways.
-Cross-dataset: REML random-effects meta-analysis on effect sizes + Robust Rank Aggregation.
-Filtering: minimum dataset representation, direction consistency, FDR control.
-
-Outputs
--------
-dataset_summary.csv                 One row per included dataset.
-per_dataset_gene_stats.csv          Gene-level stats for every dataset.
-per_dataset_gsea.csv                GSEA results for every dataset (with leading edge).
-gene_meta_all.csv                   Random-effects meta-analysis for all genes.
-gene_meta_significant.csv           Filtered gene table (paper Table / Supplement).
-gene_rra.csv                        Robust Rank Aggregation results for all genes.
-pathway_meta_all.csv                Random-effects meta-analysis for all pathways.
-pathway_meta_significant.csv        Filtered pathway table.
-pathway_leading_edge_detail.csv     Per-gene leading-edge frequency for significant pathways.
-"""
-
 import logging
 import os
 from collections import Counter
@@ -27,22 +7,22 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 import gseapy as gp
+from pymare import Dataset
+from pymare.estimators import VarianceBasedLikelihoodEstimator
 from scipy import stats
-from scipy.optimize import minimize_scalar
 from statsmodels.stats.multitest import multipletests
 from tqdm.auto import tqdm
 
-from ibd.core.data.utils import read_all_datasets, read_all_metadata
-from ibd.core.data.processing.normalization import robust_zscore_normalization_per_dataset
-from ibd.core.utils.genes import entrez_id_to_gene_symbol
+from core.data.utils import read_all_datasets, read_all_metadata
+from core.utils.genes import entrez_id_to_gene_symbol
 
 
 DEFAULT_GENESET_LIBRARIES = [
-    'WikiPathway_2023_Human',
-    'KEGG_2021_Human',
-    'GO_Biological_Process_2023',
-    'GO_Molecular_Function_2023',
-    'GO_Cellular_Component_2023',
+    # 'WikiPathway_2023_Human',
+    # 'KEGG_2021_Human',
+    # 'GO_Biological_Process_2023',
+    # 'GO_Molecular_Function_2023',
+    # 'GO_Cellular_Component_2023',
     'Reactome_2022',
 ]
 
@@ -61,8 +41,6 @@ class UcVsHcConfig:
     min_samples: int = 5
     min_per_group: int = 3
 
-    # Normalisation
-    normalize: str = 'none'  # 'none' | 'robust_zscore'
     skip_gene_mapping: bool = False
 
     # Meta-analysis filtering
@@ -87,30 +65,99 @@ def _standardize_metadata(metadata: pd.DataFrame) -> pd.DataFrame:
         result['inflammation'] = None
     if 'time_of_biopsy' not in result.columns:
         result['time_of_biopsy'] = None
-    result['inflammation'] = np.where(
-        result['inflammation'].isna() & (result['disease'] == 'UC'),
-        'Inflamed', result['inflammation'],
-    )
-    result['inflammation'] = np.where(
-        result['inflammation'].isna() & (result['disease'] == 'Ctrl'),
-        'Uninflamed', result['inflammation'],
-    )
+    result['inflammation'] = np.where(result['inflammation'].isna() & (result['disease'] == 'UC'), 'Inflamed', result['inflammation'])
+    result['inflammation'] = np.where(result['inflammation'].isna() & (result['disease'] == 'Ctrl'), 'Uninflamed', result['inflammation'])
+
     return result
 
 
 def _select_uc_vs_ctrl(metadata: pd.DataFrame) -> pd.Series:
     time_ok = metadata['time_of_biopsy'].isna() | metadata['time_of_biopsy'].isin(['W0', 'Before'])
+    is_colon = ~(metadata['tissue'].str.lower() == 'ileum')
     mask = (
         ((metadata['disease'] == 'UC') & (metadata['inflammation'] == 'Inflamed'))
         | ((metadata['disease'] == 'Ctrl') & (metadata['inflammation'] == 'Uninflamed'))
-    ) & time_ok
+    ) & time_ok & is_colon
+
     return metadata.loc[mask, 'disease']
 
 
 def _collapse_duplicate_genes(data: pd.DataFrame) -> pd.DataFrame:
     if data.columns.duplicated().any():
         data = data.T.groupby(level=0).mean().T
+
     return data
+
+
+# ===================================================================
+# Limma: moderated t-statistics via rpy2
+# ===================================================================
+
+def _limma_moderated_t(data: pd.DataFrame, labels: pd.Series) -> pd.DataFrame:
+    """
+    Run limma on expression matrix, return DataFrame with gene, moderated t-stat.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Samples (rows) x genes (columns), log-scale expression.
+    labels : pd.Series
+        'UC' or 'Ctrl' for each sample, index matching data.index.
+
+    Returns
+    -------
+    pd.DataFrame with columns: gene, t_stat_moderated, logFC, p_value_moderated
+    """
+    import rpy2.robjects as ro
+    from rpy2.robjects.packages import importr
+
+    try:
+        limma = importr('limma')
+
+        # Expression matrix: genes as rows, samples as columns (limma convention)
+        expr_matrix = data.values.T  # shape: (n_genes, n_samples)
+        gene_names = list(data.columns)
+        n_genes = len(gene_names)
+        n_samples = len(data)
+
+        # Group vector: 0=Ctrl, 1=UC
+        group = ro.IntVector([1 if labels.loc[s] == 'UC' else 0 for s in data.index])
+        ro.globalenv['group'] = group
+
+        # Build design matrix in R
+        design_r = ro.r('model.matrix(~ group)')
+
+        # Convert expression to R matrix (column-major order for R)
+        expr_r = ro.r['matrix'](
+            ro.FloatVector(expr_matrix.flatten(order='F')),
+            nrow=n_genes,
+            ncol=n_samples,
+        )
+
+        # Fit limma
+        fit = limma.lmFit(expr_r, design_r)
+        fit = limma.eBayes(fit)
+
+        # Extract results for the group coefficient (column 2, 1-based)
+        top = limma.topTable(fit, coef=2, number=n_genes, sort_by='none')
+
+        # Extract columns from R data.frame manually
+        t_vals = np.array(top.rx2('t'))
+        logfc_vals = np.array(top.rx2('logFC'))
+        pval_vals = np.array(top.rx2('P.Value'))
+
+        # Clean up R global env
+        ro.r('rm(group)')
+
+        return pd.DataFrame({
+            'gene': gene_names,
+            't_stat_moderated': t_vals,
+            'logFC': logfc_vals,
+            'p_value_moderated': pval_vals,
+        })
+
+    except Exception as exc:
+        raise RuntimeError(f'limma execution failed for dataset: {exc}') from exc
 
 
 # ===================================================================
@@ -126,20 +173,30 @@ def _hedges_g(mean_uc, mean_ctrl, var_uc, var_ctrl, n_uc, n_ctrl):
         return np.nan
     d = (mean_uc - mean_ctrl) / np.sqrt(pooled_var)
     J = 1 - 3 / (4 * (n_uc + n_ctrl) - 9)
+
     return d * J
 
 
 def _hedges_g_variance(g, n_uc, n_ctrl):
     """Approximate sampling variance of Hedges' g."""
     n = n_uc + n_ctrl
+
     return n / (n_uc * n_ctrl) + g ** 2 / (2 * n)
 
 
 def _compute_gene_stats(data: pd.DataFrame, labels: pd.Series) -> pd.DataFrame:
+    """
+    Compute per-gene statistics for one dataset.
+
+    Two parallel streams:
+      - t_stat: for GSEA preranking (limma moderated t)
+      - hedges_g + hedges_g_var: always from raw group statistics (for meta-analysis)
+    """
     ctrl_mask = labels == 'Ctrl'
     uc_mask = labels == 'UC'
-    results = []
 
+    # --- Raw statistics for Hedges' g (always needed) ---
+    raw_results = {}
     for gene in tqdm(data.columns, desc='Genes', unit='gene', leave=False):
         ctrl_vals = data.loc[ctrl_mask, gene].dropna().astype(float)
         uc_vals = data.loc[uc_mask, gene].dropna().astype(float)
@@ -147,76 +204,49 @@ def _compute_gene_stats(data: pd.DataFrame, labels: pd.Series) -> pd.DataFrame:
         if n_ctrl < 2 or n_uc < 2:
             continue
 
-        t_stat, p_value = stats.ttest_ind(uc_vals, ctrl_vals, equal_var=False)
         mean_ctrl, mean_uc = ctrl_vals.mean(), uc_vals.mean()
         g = _hedges_g(mean_uc, mean_ctrl, uc_vals.var(ddof=1), ctrl_vals.var(ddof=1), n_uc, n_ctrl)
         g_var = _hedges_g_variance(g, n_uc, n_ctrl) if not np.isnan(g) else np.nan
 
-        results.append({
+        raw_results[gene] = {
             'gene': gene,
             'n_uc': n_uc,
             'n_ctrl': n_ctrl,
             'mean_uc': mean_uc,
             'mean_ctrl': mean_ctrl,
             'mean_diff': mean_uc - mean_ctrl,
-            't_stat': t_stat,
-            'p_value': p_value,
             'hedges_g': g,
             'hedges_g_var': g_var,
-        })
+        }
 
-    df = pd.DataFrame(results)
-    if df.empty:
-        return df
-    df['q_value'] = multipletests(df['p_value'], method='fdr_bh')[1]
-    # Rank within dataset by |t_stat| (1 = strongest)
+    if not raw_results:
+        return pd.DataFrame()
+
+    # --- Ranking statistic for GSEA (limma moderated t) ---
+    limma_df = _limma_moderated_t(data, labels)
+    limma_lookup = limma_df.set_index('gene')
+    for gene, rec in raw_results.items():
+        if gene in limma_lookup.index:
+            row = limma_lookup.loc[gene]
+            rec['t_stat'] = float(row['t_stat_moderated'])
+            rec['p_value'] = float(row['p_value_moderated'])
+        else:
+            rec['t_stat'] = np.nan
+            rec['p_value'] = np.nan
+
+    df = pd.DataFrame(raw_results.values())
+    df['q_value'] = multipletests(df['p_value'].fillna(1), method='fdr_bh')[1]
     df['rank'] = df['t_stat'].abs().rank(ascending=False, method='min').astype(int)
     return df
 
 
 # ===================================================================
-# Random-effects meta-analysis (REML)
+# Random-effects meta-analysis (via PyMARE)
 # ===================================================================
-
-def _cochran_Q_and_I2(effects: np.ndarray, variances: np.ndarray):
-    """Compute Cochran's Q statistic and I² from fixed-effects model."""
-    w = 1.0 / variances
-    mu_fixed = np.sum(w * effects) / w.sum()
-    Q = np.sum(w * (effects - mu_fixed) ** 2)
-    df = len(effects) - 1
-    I2 = max(0.0, (Q - df) / Q) if Q > 0 else 0.0
-    return Q, I2
-
-
-def _reml_tau2(effects: np.ndarray, variances: np.ndarray) -> float:
-    """
-    Estimate between-study variance τ² via REML.
-
-    Maximises the restricted (residual) log-likelihood directly
-    using bounded scalar optimisation.
-    """
-    k = len(effects)
-    if k < 2:
-        return 0.0
-
-    def neg_reml_loglik(tau2):
-        w = 1.0 / (variances + tau2)
-        w_sum = w.sum()
-        mu = np.sum(w * effects) / w_sum
-        resid = effects - mu
-        ll = (-0.5 * np.sum(np.log(variances + tau2))
-              - 0.5 * np.log(w_sum)
-              - 0.5 * np.sum(w * resid ** 2))
-        return -ll
-
-    upper = max(10.0 * np.var(effects), 1.0)
-    result = minimize_scalar(neg_reml_loglik, bounds=(0, upper), method='bounded')
-    return max(0.0, result.x)
-
 
 def _random_effects_meta(effects: np.ndarray, variances: np.ndarray):
     """
-    REML random-effects meta-analysis.
+    REML random-effects meta-analysis using PyMARE.
 
     Returns: (combined_effect, se, p_value, tau2, I2)
     """
@@ -232,22 +262,21 @@ def _random_effects_meta(effects: np.ndarray, variances: np.ndarray):
         p = 2 * stats.norm.sf(abs(z)) if np.isfinite(z) else np.nan
         return effects[0], se, p, 0.0, 0.0
 
-    # Estimate τ² via REML
-    tau2 = _reml_tau2(effects, variances)
+    dataset = Dataset(y=effects, v=variances)
+    estimator = VarianceBasedLikelihoodEstimator(method='REML')
+    estimator.fit_dataset(dataset)
 
-    # Cochran's Q and I² (computed from fixed-effects weights, standard definition)
-    _, I2 = _cochran_Q_and_I2(effects, variances)
+    summary = estimator.summary()
+    fe = summary.get_fe_stats()
+    het = summary.get_heterogeneity_stats()
 
-    # Combined estimate with random-effects weights
-    w_re = 1.0 / (variances + tau2)
-    w_re_sum = w_re.sum()
-    mu_re = np.sum(w_re * effects) / w_re_sum
-    se_re = np.sqrt(1.0 / w_re_sum)
+    mu = float(fe['est'][0][0])
+    se = float(fe['se'][0][0])
+    p = float(fe['p'][0][0])
+    tau2 = float(estimator.params_['tau2'][0][0])
+    I2 = float(het['I^2'][0]) / 100.0  # PyMARE returns percentage
 
-    z = mu_re / se_re
-    p = 2 * stats.norm.sf(abs(z))
-
-    return mu_re, se_re, p, tau2, I2
+    return mu, se, p, tau2, I2
 
 
 # ===================================================================
@@ -302,12 +331,12 @@ def _filter_genes(meta: pd.DataFrame, config: UcVsHcConfig) -> pd.DataFrame:
 
 
 # ===================================================================
-# Robust Rank Aggregation (RRA)
+# Robust Rank Aggregation (RRA)  — Kolde et al. 2012
 # ===================================================================
 
 def _rra_rho(normalized_ranks: np.ndarray) -> float:
     """
-    Compute the RRA rho statistic (Kolde et al., 2012).
+    Compute the RRA rho statistic.
 
     For sorted normalized ranks u_(1) <= ... <= u_(k), compute:
         rho = min_j  Beta_CDF(u_(j); j, k-j+1)
@@ -329,8 +358,7 @@ def _rra_rho(normalized_ranks: np.ndarray) -> float:
 def _rra_pvalue(rho: float, k: int) -> float:
     """
     Approximate p-value for the rho statistic.
-    P(rho <= x) ≈ x * k  for small x (Bonferroni correction on k beta tests).
-    Exact for the minimum of independent uniform RVs; conservative otherwise.
+    P(rho <= x) ~ x * k  for small x (Bonferroni correction on k beta tests).
     """
     if np.isnan(rho):
         return np.nan
@@ -343,23 +371,17 @@ def _compute_rra(per_dataset_genes: pd.DataFrame, config: UcVsHcConfig) -> pd.Da
 
     Each gene is ranked by |t_stat| within its dataset (1 = strongest).
     Ranks are normalised to [0, 1] by dividing by total genes in that dataset.
-    RRA is computed on the normalised ranks.
-
     Additionally, directional RRA is computed:
       - rra_up: ranks by t_stat descending (most upregulated = rank 1)
       - rra_down: ranks by -t_stat descending (most downregulated = rank 1)
     """
-    # Precompute total genes per dataset for normalisation
     genes_per_dataset = per_dataset_genes.groupby('dataset')['gene'].count().to_dict()
 
-    # Compute directional ranks per dataset
     all_ranks = []
     for ds_name, grp in per_dataset_genes.groupby('dataset'):
         n_genes = genes_per_dataset[ds_name]
         sub = grp[['gene', 't_stat', 'rank']].copy()
-        # |t_stat| rank already exists as 'rank'
         sub['norm_rank'] = sub['rank'] / n_genes
-        # Directional ranks
         sub['rank_up'] = sub['t_stat'].rank(ascending=False, method='min').astype(int)
         sub['rank_down'] = sub['t_stat'].rank(ascending=True, method='min').astype(int)
         sub['norm_rank_up'] = sub['rank_up'] / n_genes
@@ -455,7 +477,6 @@ def _run_gsea_per_dataset(
         res['NOM p-val'] = pd.to_numeric(res['NOM p-val'], errors='coerce')
         res['FDR q-val'] = pd.to_numeric(res['FDR q-val'], errors='coerce')
 
-        # Parse Tag % -> n_leading_edge / gene_set_size
         parsed = res['Tag %'].apply(_parse_tag_percent)
         res['n_leading_edge'] = parsed.apply(lambda x: x[0])
         res['gene_set_size'] = parsed.apply(lambda x: x[1])
@@ -540,7 +561,6 @@ def _meta_analyse_pathways(per_dataset: pd.DataFrame, config: UcVsHcConfig) -> p
         direction = 'up' if n_up >= n_down else 'down'
         sign_p = stats.binomtest(max(n_up, n_down), n_valid, 0.5).pvalue if n_valid >= 2 else np.nan
 
-        # Gene set size and leading edge stats
         gs_sizes = grp['gene_set_size'].values if 'gene_set_size' in grp.columns else np.array([])
         n_leads = grp['n_leading_edge'].values if 'n_leading_edge' in grp.columns else np.array([])
         valid_size_mask = gs_sizes > 0
@@ -548,7 +568,6 @@ def _meta_analyse_pathways(per_dataset: pd.DataFrame, config: UcVsHcConfig) -> p
         lead_fracs = n_leads[valid_size_mask] / gs_sizes[valid_size_mask] if np.any(valid_size_mask) else np.array([])
         mean_lead_fraction = float(np.mean(lead_fracs)) if len(lead_fracs) > 0 else 0.0
 
-        # Aggregate leading edge
         gene_counts, n_ds_with_lead = _aggregate_leading_edge(grp)
         core_threshold = max(1, n_ds_with_lead / 2)
         core_genes = sorted([g for g, c in gene_counts.items() if c >= core_threshold])
@@ -655,9 +674,6 @@ def _build_leading_edge_detail(
 # ===================================================================
 
 def run_uc_vs_hc_experiment(config: UcVsHcConfig) -> None:
-    if config.normalize not in ('none', 'robust_zscore'):
-        raise ValueError("normalize must be 'none' or 'robust_zscore'")
-
     # ---- Load & prepare ----
     logging.info('Loading datasets from %s', config.data_dir)
     dataset, dataset_labels = read_all_datasets(config.data_dir, dropna=False)
@@ -685,9 +701,6 @@ def run_uc_vs_hc_experiment(config: UcVsHcConfig) -> None:
     dataset = dataset.loc[labels.index]
     dataset_labels = dataset_labels.loc[labels.index]
 
-    if config.normalize == 'robust_zscore':
-        dataset = robust_zscore_normalization_per_dataset(dataset, dataset_labels)
-
     os.makedirs(config.output_dir, exist_ok=True)
 
     # ---- Per-dataset analysis ----
@@ -706,21 +719,16 @@ def run_uc_vs_hc_experiment(config: UcVsHcConfig) -> None:
         n_ctrl = int((ds_labels == 'Ctrl').sum())
 
         if n_total < config.min_samples or n_uc < config.min_per_group or n_ctrl < config.min_per_group:
-            logging.info(
-                'Skipping %s (%d/%d): n=%d UC=%d Ctrl=%d',
-                ds_name, idx, len(dataset_names), n_total, n_uc, n_ctrl,
-            )
+            logging.info('Skipping %s (%d/%d): n=%d UC=%d Ctrl=%d', ds_name, idx, len(dataset_names), n_total, n_uc, n_ctrl)
             continue
 
-        logging.info(
-            'Processing %s (%d/%d): n=%d UC=%d Ctrl=%d',
-            ds_name, idx, len(dataset_names), n_total, n_uc, n_ctrl,
-        )
+        logging.info('Processing %s (%d/%d): n=%d UC=%d Ctrl=%d', ds_name, idx, len(dataset_names), n_total, n_uc, n_ctrl)
 
         gene_stats = _compute_gene_stats(ds_data, ds_labels)
         if gene_stats.empty:
             logging.warning('No gene stats for %s', ds_name)
             continue
+
         gene_stats['dataset'] = ds_name
         all_gene_stats.append(gene_stats)
 
@@ -766,8 +774,7 @@ def run_uc_vs_hc_experiment(config: UcVsHcConfig) -> None:
     logging.info('Running Robust Rank Aggregation')
     gene_rra = _compute_rra(per_dataset_genes, config)
     gene_rra.to_csv(os.path.join(config.output_dir, 'gene_rra.csv'), index=False)
-    logging.info('RRA: %d genes, %d with FDR<0.05',
-                 len(gene_rra), int((gene_rra['rra_q'] < 0.05).sum()))
+    logging.info('RRA: %d genes, %d with FDR<0.05', len(gene_rra), int((gene_rra['rra_q'] < 0.05).sum()))
 
     # ---- Pathway meta-analysis ----
     if not per_dataset_gsea.empty:
@@ -795,7 +802,6 @@ def build_config(
     alpha: float = 0.05,
     min_samples: int = 5,
     min_per_group: int = 3,
-    normalize: str = 'none',
     skip_gene_mapping: bool = False,
     min_datasets: int = 4,
     direction_threshold: float = 0.8,
@@ -815,7 +821,6 @@ def build_config(
         alpha=alpha,
         min_samples=min_samples,
         min_per_group=min_per_group,
-        normalize=normalize,
         skip_gene_mapping=skip_gene_mapping,
         min_datasets=min_datasets,
         direction_threshold=direction_threshold,

@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reactome Hierarchy — Enrichment Explorer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: #0a0e17;
+    color: #c8cdd8;
+    min-height: 100vh;
+  }
+
+  /* ── Upload screen ── */
+  #upload-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 40px;
+  }
+
+  #upload-screen h1 { font-size: 22px; font-weight: 500; color: #e0e4ec; margin-bottom: 6px; }
+  #upload-screen .sub { font-size: 13px; color: #5a6377; margin-bottom: 32px; }
+
+  .drop-zone {
+    width: 420px;
+    height: 160px;
+    border: 2px dashed rgba(91, 141, 239, 0.35);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: rgba(91, 141, 239, 0.7);
+    background: rgba(91, 141, 239, 0.06);
+  }
+  .drop-zone .icon { font-size: 36px; color: #5b8def; }
+  .drop-zone .label { font-size: 14px; color: #7a8599; }
+  .drop-zone .hint { font-size: 11px; color: #4a5568; }
+
+  #file-input { display: none; }
+
+  .usage-hint {
+    margin-top: 28px;
+    max-width: 520px;
+    font-size: 12px;
+    color: #4a5568;
+    line-height: 1.6;
+    text-align: center;
+  }
+  .usage-hint code {
+    font-family: 'IBM Plex Mono', monospace;
+    background: rgba(91, 141, 239, 0.1);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #7a8599;
+    font-size: 11px;
+  }
+
+  /* ── Tree screen ── */
+  #tree-screen { display: none; }
+
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: rgba(10, 14, 23, 0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(100, 116, 145, 0.15);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .header h1 { font-size: 16px; font-weight: 500; color: #e0e4ec; }
+  .header .stats { font-size: 12px; color: #5a6377; }
+
+  .header-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .btn {
+    background: rgba(91,141,239,0.12);
+    border: 1px solid rgba(91,141,239,0.25);
+    color: #5b8def;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: rgba(91,141,239,0.22); }
+
+  .btn-small {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+
+  .legend-inline {
+    display: flex;
+    gap: 16px;
+    font-size: 11px;
+    color: #7a8599;
+    align-items: center;
+  }
+
+  .legend-inline .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+
+  .search-box {
+    background: #141a2a;
+    border: 1px solid rgba(100,116,145,0.3);
+    border-radius: 6px;
+    padding: 6px 12px;
+    color: #c8cdd8;
+    font-size: 12px;
+    font-family: inherit;
+    width: 220px;
+    outline: none;
+  }
+  .search-box:focus { border-color: rgba(91,141,239,0.5); }
+  .search-box::placeholder { color: #4a5568; }
+
+  /* ── Tree nodes ── */
+  .tree-container {
+    padding: 16px 24px 60px;
+    max-width: 1100px;
+  }
+
+  .tree-node {
+    margin-left: 20px;
+    border-left: 1px solid rgba(100, 116, 145, 0.1);
+  }
+
+  .tree-node.root { margin-left: 0; border-left: none; }
+
+  .node-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.1s;
+    user-select: none;
+  }
+  .node-row:hover { background: rgba(91, 141, 239, 0.06); }
+
+  .node-row.highlight { background: rgba(91, 141, 239, 0.12); }
+
+  .toggle {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #5a6377;
+    flex-shrink: 0;
+    transition: transform 0.15s;
+  }
+  .toggle.expanded { transform: rotate(90deg); }
+  .toggle.leaf { visibility: hidden; }
+
+  .node-name {
+    font-size: 13px;
+    flex-grow: 1;
+  }
+
+  .node-name.enriched-self { font-weight: 500; }
+
+  .enrichment-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+
+  .badge-has-enriched {
+    background: rgba(91, 141, 239, 0.15);
+    color: #7aafef;
+  }
+  .badge-none {
+    background: rgba(100, 116, 145, 0.08);
+    color: #4a5568;
+  }
+
+  .nes-chip {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 1px 8px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+
+  .nes-up {
+    background: rgba(239, 107, 107, 0.15);
+    color: #ef6b6b;
+  }
+  .nes-down {
+    background: rgba(78, 168, 222, 0.15);
+    color: #4ea8de;
+  }
+
+  .children-container {
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+  }
+
+  .children-container.collapsed {
+    max-height: 0 !important;
+  }
+
+  .hidden { display: none !important; }
+
+  .node-dimmed .node-name { color: #3a4050; }
+  .node-dimmed .enrichment-badge { opacity: 0.3; }
+</style>
+</head>
+<body>
+
+<!-- Upload screen -->
+<div id="upload-screen">
+  <h1>Reactome Hierarchy Explorer</h1>
+  <div class="sub">Explore pathway enrichment results in their biological hierarchy</div>
+  <div class="drop-zone" id="drop-zone">
+    <div class="icon">▦</div>
+    <div class="label">Drop reactome_tree.json here or click to browse</div>
+    <div class="hint">Generated by build_reactome_hierarchy.py</div>
+  </div>
+  <input type="file" id="file-input" accept=".json">
+  <div class="usage-hint">
+    Generate the JSON with:<br>
+    <code>python build_reactome_hierarchy.py --pathways pathway_meta_significant.csv -o reactome_tree.json</code>
+  </div>
+</div>
+
+<!-- Tree screen -->
+<div id="tree-screen">
+  <div class="header">
+    <div>
+      <h1>Reactome Hierarchy Explorer</h1>
+      <div class="stats" id="header-stats"></div>
+    </div>
+    <div class="header-controls">
+      <div class="legend-inline">
+        <span><span class="dot" style="background:#ef6b6b"></span>Up</span>
+        <span><span class="dot" style="background:#4ea8de"></span>Down</span>
+      </div>
+      <input type="text" class="search-box" id="search-box" placeholder="Search pathways...">
+      <button class="btn btn-small" id="btn-expand-enriched">Expand enriched</button>
+      <button class="btn btn-small" id="btn-collapse">Collapse all</button>
+      <button class="btn btn-small" id="btn-reload">Load file</button>
+    </div>
+  </div>
+  <div class="tree-container" id="tree-container"></div>
+</div>
+
+<script>
+// ── File handling ──
+const uploadScreen = document.getElementById('upload-screen');
+const treeScreen = document.getElementById('tree-screen');
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) loadFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files.length) loadFile(fileInput.files[0]); });
+
+document.getElementById('btn-reload').addEventListener('click', () => {
+  treeScreen.style.display = 'none';
+  uploadScreen.style.display = 'flex';
+  fileInput.value = '';
+});
+
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      uploadScreen.style.display = 'none';
+      treeScreen.style.display = 'block';
+      renderTree(data);
+    } catch (err) { alert('Invalid JSON: ' + err.message); }
+  };
+  reader.readAsText(file);
+}
+
+// ── Tree rendering ──
+let treeData = null;
+let allNodeEls = [];
+
+function renderTree(data) {
+  treeData = data;
+  allNodeEls = [];
+  const container = document.getElementById('tree-container');
+  container.innerHTML = '';
+
+  // Stats
+  document.getElementById('header-stats').textContent =
+    `${data.enriched} enriched / ${data.total} pathways in tree`;
+
+  // Render children (skip the synthetic root)
+  if (data.children) {
+    data.children.forEach(child => {
+      container.appendChild(buildNodeEl(child, true));
+    });
+  }
+}
+
+function buildNodeEl(node, isRoot = false) {
+  const div = document.createElement('div');
+  div.className = 'tree-node' + (isRoot ? ' root' : '');
+  div.dataset.nodeId = node.id || '';
+
+  const hasChildren = node.children && node.children.length > 0;
+  const isEnrichedSelf = !!node.data;
+  const hasEnrichedDescendants = node.enriched > 0;
+
+  // Row
+  const row = document.createElement('div');
+  row.className = 'node-row';
+
+  // Toggle arrow
+  const toggle = document.createElement('span');
+  toggle.className = 'toggle' + (hasChildren ? '' : ' leaf');
+  toggle.textContent = '▶';
+  row.appendChild(toggle);
+
+  // Name
+  const nameEl = document.createElement('span');
+  nameEl.className = 'node-name' + (isEnrichedSelf ? ' enriched-self' : '');
+  nameEl.textContent = node.name;
+  if (isEnrichedSelf) {
+    nameEl.style.color = node.data.direction === 'up' ? '#ef6b6b' : '#4ea8de';
+  }
+  row.appendChild(nameEl);
+
+  // NES chip (if directly enriched)
+  if (isEnrichedSelf) {
+    const nes = document.createElement('span');
+    const dir = node.data.direction;
+    nes.className = 'nes-chip ' + (dir === 'up' ? 'nes-up' : 'nes-down');
+    const arrow = dir === 'up' ? '↑' : '↓';
+    nes.textContent = `${arrow} ${node.data.nes.toFixed(2)}`;
+    row.appendChild(nes);
+  }
+
+  // Enrichment count badge
+  if (hasChildren) {
+    const badge = document.createElement('span');
+    badge.className = 'enrichment-badge ' + (hasEnrichedDescendants ? 'badge-has-enriched' : 'badge-none');
+    badge.textContent = `${node.enriched}/${node.total}`;
+    row.appendChild(badge);
+  }
+
+  div.appendChild(row);
+
+  // Children container
+  if (hasChildren) {
+    const childContainer = document.createElement('div');
+    childContainer.className = 'children-container collapsed';
+
+    node.children.forEach(child => {
+      childContainer.appendChild(buildNodeEl(child));
+    });
+
+    div.appendChild(childContainer);
+
+    // Click to toggle
+    row.addEventListener('click', e => {
+      e.stopPropagation();
+      const isCollapsed = childContainer.classList.contains('collapsed');
+      if (isCollapsed) {
+        childContainer.classList.remove('collapsed');
+        childContainer.style.maxHeight = childContainer.scrollHeight + 'px';
+        toggle.classList.add('expanded');
+        // After transition, remove max-height so nested expansions work
+        setTimeout(() => { childContainer.style.maxHeight = 'none'; }, 260);
+      } else {
+        childContainer.style.maxHeight = childContainer.scrollHeight + 'px';
+        // Force reflow
+        childContainer.offsetHeight;
+        childContainer.style.maxHeight = '0';
+        childContainer.classList.add('collapsed');
+        toggle.classList.remove('expanded');
+      }
+    });
+  }
+
+  allNodeEls.push({ el: div, row, node, nameEl, toggle });
+  return div;
+}
+
+// ── Controls ──
+
+document.getElementById('btn-collapse').addEventListener('click', () => {
+  allNodeEls.forEach(({ el, toggle }) => {
+    const cc = el.querySelector(':scope > .children-container');
+    if (cc) {
+      cc.classList.add('collapsed');
+      cc.style.maxHeight = '0';
+      toggle.classList.remove('expanded');
+    }
+  });
+});
+
+document.getElementById('btn-expand-enriched').addEventListener('click', () => {
+  // First collapse all
+  allNodeEls.forEach(({ el, toggle }) => {
+    const cc = el.querySelector(':scope > .children-container');
+    if (cc) {
+      cc.classList.add('collapsed');
+      cc.style.maxHeight = '0';
+      toggle.classList.remove('expanded');
+    }
+  });
+
+  // Then expand nodes that have enriched descendants
+  allNodeEls.forEach(({ el, row, node, toggle }) => {
+    if (node.enriched > 0) {
+      const cc = el.querySelector(':scope > .children-container');
+      if (cc) {
+        cc.classList.remove('collapsed');
+        cc.style.maxHeight = 'none';
+        toggle.classList.add('expanded');
+      }
+    }
+  });
+});
+
+// Search
+const searchBox = document.getElementById('search-box');
+let searchTimeout;
+searchBox.addEventListener('input', () => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    const query = searchBox.value.toLowerCase().trim();
+    if (!query) {
+      allNodeEls.forEach(({ el, row }) => {
+        el.classList.remove('node-dimmed');
+        row.classList.remove('highlight');
+      });
+      return;
+    }
+
+    // Find matching nodes
+    const matches = new Set();
+    allNodeEls.forEach(({ el, node }) => {
+      if (node.name.toLowerCase().includes(query)) {
+        matches.add(el);
+      }
+    });
+
+    // Dim non-matches, highlight matches
+    allNodeEls.forEach(({ el, row }) => {
+      if (matches.has(el)) {
+        el.classList.remove('node-dimmed');
+        row.classList.add('highlight');
+        // Expand all ancestors
+        let parent = el.parentElement;
+        while (parent) {
+          if (parent.classList && parent.classList.contains('children-container')) {
+            parent.classList.remove('collapsed');
+            parent.style.maxHeight = 'none';
+            const parentNode = parent.parentElement;
+            if (parentNode) {
+              const t = parentNode.querySelector(':scope > .node-row > .toggle');
+              if (t) t.classList.add('expanded');
+            }
+          }
+          parent = parent.parentElement;
+        }
+      } else {
+        el.classList.add('node-dimmed');
+        row.classList.remove('highlight');
+      }
+    });
+  }, 200);
+});
+</script>
+</body>
+</html>
