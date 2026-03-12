@@ -1,4 +1,0 @@
-dataset,n_total,n_uc,n_ctrl,n_genes_tested,n_sig_genes_fdr05
-GSE11223,124,61,63,18091,48
-GSE179285,55,32,23,19070,111
-GSE75214,34,23,11,21272,3325

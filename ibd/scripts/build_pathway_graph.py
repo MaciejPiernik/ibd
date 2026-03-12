@@ -2,10 +2,10 @@
 Generate pathway overlap network graph data (JSON) from meta-analysis CSVs.
 
 Usage:
-    python build_pathway_graph.py \\
-        --pathways pathway_meta_significant.csv \\
-        --genes gene_meta_significant.csv \\
-        --output pathway_graph.json \\
+    python ibd/scripts/build_pathway_graph.py \
+        --pathways results/new/uc_vs_hc/pathway_meta_significant.csv \
+        --genes results/new/uc_vs_hc/gene_meta_significant.csv \
+        --output results/new/uc_vs_hc/pathway_graph.json \
         --gene-alpha 0.05
 
 The output JSON can be loaded into the pathway_network_viewer.html.

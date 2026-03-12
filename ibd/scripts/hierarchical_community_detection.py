@@ -1,12 +1,15 @@
+from operator import index
 import pandas as pd
 import numpy as np
 import networkx as nx
 
-THRESHOLD = 0.3  # Minimum overlap coefficient to consider an edge
-DIR = 'results/uc_vs_hc/'  # Output directory for results
+MAX_DEPTH = 1  # Maximum depth of the hierarchy
+MIN_SIZE = 6   # Minimum cluster size to consider for further splitting
+THRESHOLD = 0.33  # Minimum overlap coefficient to consider an edge
+DIR = 'results/new/cd_vs_hc/'  # Output directory for results
 
 # 1. Load Data
-df = pd.read_csv(f'{DIR}pathway_meta_significant.csv')
+df = pd.read_csv(f'{DIR}pathway_meta_significant_knee.csv')
 
 # 2. Build the Graph
 gene_sets = [set(x.split(';')) for x in df['lead_genes_core']]
@@ -38,13 +41,13 @@ def get_representative(node_indices, df):
     subset['impact_score'] = subset['combined_nes'].abs() * -np.log10(subset['p_value'] + 1e-100)
     return subset.loc[subset['impact_score'].idxmax(), 'term']
 
-def recursive_louvain(graph, node_indices, current_id="1", min_size=6, max_depth=4, depth=1):
+def recursive_louvain(graph, node_indices, current_id="1", min_size=6, max_depth=None, depth=1):
     """
     Recursively splits clusters until they are smaller than min_size 
     or cannot be split further by modularity optimization.
     """
     # Base case: Cluster too small or max depth reached
-    if len(node_indices) < min_size or depth >= max_depth:
+    if len(node_indices) < min_size or (max_depth is not None and depth >= max_depth):
         return [{
             'Cluster_ID': current_id,
             'Node_Indices': node_indices,
@@ -91,7 +94,7 @@ final_clusters = []
 for i, comm in enumerate(global_communities):
     cid = str(i + 1)
     # Run recursion on each global cluster
-    final_clusters.extend(recursive_louvain(G, list(comm), current_id=cid, min_size=6, max_depth=2, depth=1))
+    final_clusters.extend(recursive_louvain(G, list(comm), current_id=cid, min_size=MIN_SIZE, max_depth=MAX_DEPTH, depth=1))
 
 # 5. Export Results
 results_data = []
@@ -109,6 +112,16 @@ for c in final_clusters:
 
 results_df = pd.DataFrame(results_data)
 results_df.to_csv(f'{DIR}hierarchical_pathway_clusters.csv', index=False)
+
+# Add cluster labels back to original df for reference and save
+cluster_labels = {}
+for c in final_clusters:
+    for idx in c['Node_Indices']:
+        cluster_labels[idx] = c['Cluster_ID']
+        
+df['Hierarchy_ID'] = df.index.map(cluster_labels)
+
+df.to_csv(f'{DIR}pathway_meta_significant_knee_with_clusters.csv', index=False)
 
 print(f"Recursion Complete. Found {len(results_df)} granular clusters.")
 print(results_df[['Hierarchy_ID', 'Size', 'Representative', 'Mean_NES']].head(10))

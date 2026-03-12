@@ -6,9 +6,7 @@ import pandas as pd
 from dotenv import load_dotenv
 
 from ibd.core.data.structures.Dataset import Dataset
-from ibd.experiments.Experiment import Experiment
-from ibd.experiments.uc_vs_hc_experiment import build_config, run_uc_vs_hc_experiment
-from ibd.experiments.pathway_cluster_analysis import build_cluster_config, run_pathway_clustering
+from ibd.experiments.experiment import build_config, experiment
 
 logging.basicConfig(level=logging.INFO)
 
@@ -52,23 +50,11 @@ def run_pipeline(datasets, recompute_data, recompute_metadata):
             logging.error('Error processing dataset {}: {}'.format(dataset.id, e))
 
 
-@cli.command()
-@click.option('--experiment_name', '-e', help='The experiment to run')
-def run_experiment(experiment_name):
-    experiment = Experiment(experiment_name)
-    
-    experiment.load_data()
-
-    results = experiment.run()
-
-    print(results)
-
-
-@cli.command(name='run-uc-vs-hc')
+@cli.command(name='run-experiment')
 @click.option('--data-dir', help='Directory with dataset parquet and metadata CSV files', default='./db')
-@click.option('--output-dir', help='Directory to write CSV results', default='./results/uc_vs_hc')
+@click.option('--output-dir', help='Directory to write CSV results')
 @click.option('--alpha', help='FDR threshold', default=0.05, type=float)
-@click.option('--min-samples', help='Minimum samples in a dataset', default=5, type=int)
+@click.option('--min-samples', help='Minimum samples in a dataset', default=6, type=int)
 @click.option('--min-per-group', help='Minimum samples per group', default=3, type=int)
 @click.option('--skip-gene-mapping', help='Skip Entrez to gene symbol mapping', is_flag=True, default=False)
 @click.option('--geneset-libraries', help='Comma-separated GSEA libraries (defaults to standard set)', default=None)
@@ -76,7 +62,7 @@ def run_experiment(experiment_name):
 @click.option('--gsea-min-size', help='Minimum gene set size', default=5, type=int)
 @click.option('--gsea-max-size', help='Maximum gene set size', default=1000, type=int)
 @click.option('--gsea-seed', help='Random seed for GSEA', default=23, type=int)
-def run_uc_vs_hc(
+def run_experiment(
     data_dir,
     output_dir,
     alpha,
@@ -103,22 +89,7 @@ def run_uc_vs_hc(
         gsea_seed=gsea_seed,
     )
 
-    run_uc_vs_hc_experiment(config)
-
-
-@cli.command(name='cluster_pathways')
-@click.option('--results-dir', required=True)
-@click.option('--distance-threshold', default=None, type=float)
-def cluster_pathways(results_dir, distance_threshold):
-    config = build_cluster_config(
-        pathway_significant_path=os.path.join(results_dir, 'pathway_meta_significant_knee.csv'),
-        leading_edge_detail_path=os.path.join(results_dir, 'pathway_leading_edge_detail.csv'),
-        gene_significant_path=os.path.join(results_dir, 'gene_meta_significant.csv'),
-        output_dir=results_dir,
-        distance_threshold=distance_threshold,
-    )
-
-    run_pathway_clustering(config)
+    experiment(config)
 
 
 if __name__ == '__main__':
