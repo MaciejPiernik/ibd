@@ -7,11 +7,11 @@ Outputs:
   3. Top downregulated genes table
 
 Usage:
-    python gene_tables.py \
-        --meta gene_meta_all.csv \
-        --rra gene_rra.csv \
-        --pathways pathway_meta_significant.csv \
-        --output-dir results/
+    python ibd/scripts/build_latex_tables.py \
+        --meta results/paper/uc_vs_hc/gene_meta_all.csv \
+        --rra results/paper/uc_vs_hc/gene_rra.csv \
+        --pathways results/paper/uc_vs_hc/pathway_meta_significant.csv \
+        --output-dir results/paper
 """
 
 import argparse
@@ -20,9 +20,30 @@ import os
 import pandas as pd
 from scipy.stats import spearmanr
 
-MIN_DATASETS = 7
+MIN_DATASETS = 6
 DIRECTION_THRESHOLD = 0.8
 ALPHA = 0.05
+
+
+def get_protein_coding_genes(path: str | None = None) -> set[str]:
+    """Return a set of HGNC-approved protein-coding gene symbols.
+
+    Parameters
+    ----------
+    path : str or None
+        Local path to an HGNC custom-download TSV (must contain columns
+        ``Approved symbol`` and ``Locus group``).  If *None*, downloads
+        the current list from genenames.org.
+    """
+    HGNC_URL = (
+        'https://www.genenames.org/cgi-bin/download/custom?'
+        'col=gd_app_sym&col=gd_locus_group&status=Approved&'
+        'hgnc_datea=&hgnc_dateb=&order_by=gd_app_sym_sort&'
+        'format=text&submit=submit'
+    )
+    src = path if path else HGNC_URL
+    df = pd.read_csv(src, sep='\t')
+    return set(df.loc[df['Locus group'] == 'protein-coding gene', 'Approved symbol'])
 
 
 def _escape_latex(s: str) -> str:
@@ -65,24 +86,21 @@ def make_top_genes_table(df: pd.DataFrame, direction: str, n: int = 20) -> str:
     lines.append(r'\centering')
     lines.append(r'\scriptsize')
     lines.append(r'\renewcommand{\arraystretch}{1.15}')
-    lines.append(r'\begin{tabular}{lrrrrl}')
+    lines.append(r'\begin{tabular}{lrl}')
     lines.append(r'\hline')
-    lines.append(r"Gene & Hedges' $g$ & 95\% CI & $I^2$ & Datasets & Pathway \\")
+    lines.append(r"Gene & $g$ & Pathway \\")
     lines.append(r'\hline')
 
     for _, row in sub.iterrows():
         gene = _escape_latex(row['gene'])
         g = row['hedges_g']
-        ci = f'[{row["ci_lo"]:+.2f}, {row["ci_hi"]:+.2f}]'
-        i2 = row['I2']
-        ds = int(row['datasets'])
         theme = row.get('pathway', None)
         if pd.isna(theme) or theme is None:
             theme = '---'
         else:
             theme = _shorten_theme(theme)
         theme = _escape_latex(theme)
-        lines.append(f'  {gene} & {g:+.2f} & {ci} & {i2:.2f} & {ds} & {theme} \\\\')
+        lines.append(f'  {gene} & {g:+.2f} & {theme} \\\\')
 
     lines.append(r'\hline')
     lines.append(r'\end{tabular}')
@@ -104,6 +122,8 @@ def main():
     parser.add_argument('--output-dir', default='results/uc_vs_hc', help='Directory to save LaTeX tables')
     parser.add_argument('--top-n', type=int, default=20)
     parser.add_argument('--encoding', default='latin1')
+    parser.add_argument('--hgnc', default=None,
+                        help='Path to HGNC TSV; if omitted, downloads from genenames.org')
     args = parser.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
@@ -111,6 +131,9 @@ def main():
     meta_all = pd.read_csv(args.meta, encoding=args.encoding)
     rra = pd.read_csv(args.rra, encoding=args.encoding)
     pw_knee = pd.read_csv(args.pathways, encoding=args.encoding)
+
+    # Keep only protein-coding genes
+    pc = get_protein_coding_genes(args.hgnc)
 
     # Filter significant
     meta_sig = meta_all[
@@ -148,6 +171,8 @@ def main():
         f'% Genes mapped to a pathway: {n_mapped}',
         f'% Genes not in any pathway: {len(meta_sig) - n_mapped}',
     ])
+
+    merged = merged[merged['gene'].isin(pc)]
 
     table_up = make_top_genes_table(merged, 'up', n=args.top_n)
     table_down = make_top_genes_table(merged, 'down', n=args.top_n)

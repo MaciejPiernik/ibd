@@ -7,8 +7,8 @@ difference in effect sizes:
     z = (g_infl - g_uninfl) / sqrt(SE_infl^2 + SE_uninfl^2)
 
 Outputs:
-  1. comparison_stats.csv    – full gene-level comparison table
-  2. comparison_summary.tex  – LaTeX summary stats + top constitutive/
+  1. comparison_stats.csv    - full gene-level comparison table
+  2. comparison_summary.tex  - LaTeX summary stats + top constitutive/
                                inflammation-dependent gene tables
   3. Printed summary to stdout
 
