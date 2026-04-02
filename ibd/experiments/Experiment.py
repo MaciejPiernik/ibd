@@ -17,19 +17,12 @@ from core.data.utils import read_all_datasets, read_all_metadata
 from core.utils.genes import entrez_id_to_gene_symbol
 
 
-DEFAULT_GENESET_LIBRARIES = [
-    # 'WikiPathway_2023_Human',
-    # 'KEGG_2021_Human',
-    # 'GO_Biological_Process_2023',
-    # 'GO_Molecular_Function_2023',
-    # 'GO_Cellular_Component_2023',
-    'Reactome_2022',
-]
+DEFAULT_GENESET_LIBRARIES = ['Reactome_2022']
 
 GROUP_1 = 'UC'
-INFLAMMATION_1 = 'Uninflamed'
+INFLAMMATION_1 = 'Inflamed'
 
-GROUP_2 = 'Ctrl'
+GROUP_2 = 'UC'
 INFLAMMATION_2 = 'Uninflamed'
 
 

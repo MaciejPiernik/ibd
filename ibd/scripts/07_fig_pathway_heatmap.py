@@ -11,14 +11,14 @@ Cells are visually coded in three tiers:
   ■  Light grey            – pathway not tested / missing
 
 Usage:
-    python ibd/scripts/generate_pathway_heatmap.py \
+    python ibd/scripts/07_fig_pathway_heatmap.py \
         --uc-clusters results/paper/uc_vs_hc/hierarchical_pathway_clusters.csv \
         --uninfl-clusters results/paper/uninf_vs_hc/hierarchical_pathway_clusters.csv \
         --cd-clusters results/paper/cd_vs_hc/hierarchical_pathway_clusters.csv \
-        --uc-pw-all results/paper/uc_vs_hc/pathway_meta_significant.csv \
+        --uc-pw-all results/paper/uc_vs_hc/pathway_meta_all.csv \
         --uninfl-pw-all results/paper/uninf_vs_hc/pathway_meta_all.csv \
         --cd-pw-all results/paper/cd_vs_hc/pathway_meta_all.csv \
-        --output-pdf figures/pathway_heatmap_2.pdf \
+        --output-pdf figures/pathway_heatmap.pdf \
         --sig-threshold 0.05
 """
 import argparse, os, colorsys
@@ -93,6 +93,18 @@ def main():
     un_qval = dict(zip(un_pw["term"], un_pw["q_value"]))
     cd_qval = dict(zip(cd_pw["term"], cd_pw["q_value"]))
 
+    uc_ds = dict(zip(uc_pw["term"], uc_pw["datasets"]))
+    un_ds = dict(zip(un_pw["term"], un_pw["datasets"]))
+    cd_ds = dict(zip(cd_pw["term"], cd_pw["datasets"]))
+
+    uc_dr = dict(zip(uc_pw["term"], uc_pw["direction_ratio"]))
+    un_dr = dict(zip(un_pw["term"], un_pw["direction_ratio"]))
+    cd_dr = dict(zip(cd_pw["term"], cd_pw["direction_ratio"]))
+
+    uc_ds_max = uc_pw["datasets"].max()
+    un_ds_max = un_pw["datasets"].max()
+    cd_ds_max = cd_pw["datasets"].max()
+
     # ── Build data ──
     data = []
     for term in all_reps:
@@ -106,12 +118,18 @@ def main():
             cd_val if not np.isnan(cd_val) else un_val)
 
         # Significance flags (True = significant)
-        uc_sig = uc_qval.get(term, np.nan)
-        un_sig = un_qval.get(term, np.nan)
-        cd_sig = cd_qval.get(term, np.nan)
-        uc_sig = (uc_sig < SIG_THR) if not np.isnan(uc_sig) else np.nan
-        un_sig = (un_sig < SIG_THR) if not np.isnan(un_sig) else np.nan
-        cd_sig = (cd_sig < SIG_THR) if not np.isnan(cd_sig) else np.nan
+        # Requires: q_value < threshold AND datasets >= max/2 AND direction_ratio >= 0.8
+        def _is_sig(qval_dict, ds_dict, dr_dict, ds_max, term):
+            q = qval_dict.get(term, np.nan)
+            d = ds_dict.get(term, np.nan)
+            r = dr_dict.get(term, np.nan)
+            if np.isnan(q):
+                return np.nan
+            return (q < SIG_THR) and (d >= ds_max / 2) and (r >= 0.8)
+
+        uc_sig = _is_sig(uc_qval, uc_ds, uc_dr, uc_ds_max, term)
+        un_sig = _is_sig(un_qval, un_ds, un_dr, un_ds_max, term)
+        cd_sig = _is_sig(cd_qval, cd_ds, cd_dr, cd_ds_max, term)
 
         data.append({"name": name,
                       "uc": uc_val, "un": un_val, "cd": cd_val,

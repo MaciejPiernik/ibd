@@ -7,7 +7,7 @@ Outputs:
   3. Top downregulated genes table
 
 Usage:
-    python ibd/scripts/build_latex_tables.py \
+    python ibd/scripts/04_top_genes.py \
         --meta results/paper/uc_vs_hc/gene_meta_all.csv \
         --rra results/paper/uc_vs_hc/gene_rra.csv \
         --pathways results/paper/uc_vs_hc/pathway_meta_significant.csv \
@@ -19,10 +19,6 @@ import os
 
 import pandas as pd
 from scipy.stats import spearmanr
-
-MIN_DATASETS = 6
-DIRECTION_THRESHOLD = 0.8
-ALPHA = 0.05
 
 
 def get_protein_coding_genes(path: str | None = None) -> set[str]:
@@ -116,10 +112,10 @@ def make_top_genes_table(df: pd.DataFrame, direction: str, n: int = 20) -> str:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--meta', default='results/uc_vs_hc/gene_meta_all.csv', help='Gene-level meta-analysis results')
-    parser.add_argument('--rra', default='results/uc_vs_hc/gene_rra.csv', help='RRA results')
-    parser.add_argument('--pathways', default='results/uc_vs_hc/pathway_meta_all.csv', help='Pathway results')
-    parser.add_argument('--output-dir', default='results/uc_vs_hc', help='Directory to save LaTeX tables')
+    parser.add_argument('--meta', default='results/paper/uc_vs_hc/gene_meta_all.csv', help='Gene-level meta-analysis results')
+    parser.add_argument('--rra', default='results/paper/uc_vs_hc/gene_rra.csv', help='RRA results')
+    parser.add_argument('--pathways', default='results/paper/uc_vs_hc/pathway_meta_significant.csv', help='Pathway results')
+    parser.add_argument('--output-dir', default='results/paper/uc_vs_hc', help='Directory to save LaTeX tables')
     parser.add_argument('--top-n', type=int, default=20)
     parser.add_argument('--encoding', default='latin1')
     parser.add_argument('--hgnc', default=None,
@@ -130,21 +126,27 @@ def main():
 
     meta_all = pd.read_csv(args.meta, encoding=args.encoding)
     rra = pd.read_csv(args.rra, encoding=args.encoding)
-    pw_knee = pd.read_csv(args.pathways, encoding=args.encoding)
+    pw = pd.read_csv(args.pathways, encoding=args.encoding)
 
     # Keep only protein-coding genes
     pc = get_protein_coding_genes(args.hgnc)
 
+    min_datasets = meta_all['datasets'].max() / 2
+
     # Filter significant
     meta_sig = meta_all[
-        (meta_all['datasets'] >= MIN_DATASETS)
-        & (meta_all['direction_ratio'] >= DIRECTION_THRESHOLD)
-        & (meta_all['q_value'] < ALPHA)
+        (meta_all['datasets'] >= min_datasets)
+        & (meta_all['direction_ratio'] >= 0.8)
+        & (meta_all['q_value'] < 0.05)
     ].copy()
     meta_sig['abs_g'] = meta_sig['hedges_g'].abs()
 
+    pw_sig = pw[(pw['q_value'] < 0.05)
+                & (pw['direction_ratio'] >= 0.8)
+                & (pw['datasets'] >= min_datasets)]
+
     # Map genes to best pathway
-    gene_to_pw = build_gene_to_pathway(pw_knee)
+    gene_to_pw = build_gene_to_pathway(pw_sig)
     meta_sig['pathway'] = meta_sig['gene'].map(gene_to_pw)
 
     # RRA concordance

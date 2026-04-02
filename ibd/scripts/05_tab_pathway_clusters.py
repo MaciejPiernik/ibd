@@ -2,10 +2,11 @@
 """Generate pathway cluster tables for UC (main), uninflamed and CD (supplementary).
 
 Usage:
-    python generate_pathway_cluster_tables.py \
-        --uc-clusters results/uc_vs_hc/hierarchical_pathway_clusters.csv \
-        --uninfl-clusters results/uninf_vs_hc/hierarchical_pathway_clusters.csv \
-        --cd-clusters results/cd_vs_hc/hierarchical_pathway_clusters.csv \
+    python ibd/scripts/05_tab_pathway_clusters.py \
+        --uc-clusters results/paper/uc_vs_hc/hierarchical_pathway_clusters.csv \
+        --uninfl-clusters results/paper/uninf_vs_hc/hierarchical_pathway_clusters.csv \
+        --cd-clusters results/paper/cd_vs_hc/hierarchical_pathway_clusters.csv \
+        --uc-cd-clusters results/paper/uc_vs_cd/hierarchical_pathway_clusters.csv \
         --output-dir tables/
 """
 import argparse, os
@@ -36,11 +37,11 @@ def make_cluster_table(cl_df, caption, label, top_pathway_col="Representative"):
         "\\scriptsize\n"
         "\\renewcommand{\\arraystretch}{1.15}\n"
         "\\begin{tabular}{lrr}\n"
-        "\\hline\n"
+        "\\toprule\n"
         "Cluster representative & Pathways & Mean NES \\\\\n"
-        "\\hline\n"
+        "\\midrule\n"
         + "\n".join(rows) + "\n"
-        "\\hline\n"
+        "\\bottomrule\n"
         "\\end{tabular}\n"
         f"\\caption{{{caption}}}\n"
         f"\\label{{{label}}}\n"
@@ -53,6 +54,7 @@ def main():
     p.add_argument("--uc-clusters", required=True)
     p.add_argument("--uninfl-clusters", required=True)
     p.add_argument("--cd-clusters", required=True)
+    p.add_argument("--uc-cd-clusters", required=True)
     p.add_argument("--output-dir", required=True)
     args = p.parse_args()
 
@@ -61,9 +63,10 @@ def main():
     uc = pd.read_csv(args.uc_clusters, encoding="latin1")
     un = pd.read_csv(args.uninfl_clusters, encoding="latin1")
     cd = pd.read_csv(args.cd_clusters, encoding="latin1")
+    uc_cd = pd.read_csv(args.uc_cd_clusters, encoding="latin1")
 
     # Sort by |Mean_NES| descending within direction (up first, then down)
-    for df in [uc, un, cd]:
+    for df in [uc, un, cd, uc_cd]:
         df["_dir"] = (df["Mean_NES"] > 0).astype(int)
         df["_abs"] = df["Mean_NES"].abs()
         df.sort_values(["_dir", "_abs"], ascending=[False, False], inplace=True)
@@ -101,6 +104,17 @@ def main():
     with open(os.path.join(args.output_dir, "pathway_clusters_cd.tex"), "w") as f:
         f.write(tex_cd)
     print(f"CD: {len(cd)} clusters -> {args.output_dir}/pathway_clusters_cd.tex")
+
+    # UC vs CD supplementary table
+    tex_uc_cd = make_cluster_table(
+        uc_cd,
+        "Pathway clusters in inflamed UC versus inflamed Crohn's disease mucosa.",
+        "tab:pathway_clusters_uc_cd",
+    )
+    with open(os.path.join(args.output_dir, "pathway_clusters_uc_cd.tex"), "w") as f:
+        f.write(tex_uc_cd)
+    print(f"UC vs CD: {len(uc_cd)} clusters -> {args.output_dir}/pathway_clusters_uc_cd.tex")
+
 
 
 if __name__ == "__main__":

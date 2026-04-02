@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-uc_vs_cd_direct.py
+08_fig_uc_cd_concordance.py
 
 Generate figures and tables for the direct UC vs CD comparison.
 
@@ -28,11 +28,11 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 # ── Paths ──────────────────────────────────────────────────────────
-BASE = Path("results/new/")
+BASE = Path("results/paper/")
 DIRECT = BASE / "uc_vs_cd"
 UC_HC = BASE / "uc_vs_hc"
 CD_HC = BASE / "cd_vs_hc"
-FIGDIR = BASE / "figures"
+FIGDIR = Path("figures")
 TABDIR = BASE / "tables"
 FIGDIR.mkdir(exist_ok=True)
 TABDIR.mkdir(exist_ok=True)
@@ -78,7 +78,7 @@ label_genes = {
     "RMDN2": "other", "FGFR2": "other",
 }
 
-colors_map = {"metabolic": "#2166ac", "immune": "#b2182b", "other": "#4d4d4d"}
+colors_map = {"metabolic": "#2471a3", "immune": "#c0392b", "other": "#4d4d4d"}
 
 fig, ax = plt.subplots(figsize=(5.5, 5.5))
 
@@ -109,7 +109,7 @@ try:
         texts.append(ax.text(x, y, gene, fontsize=5.5, color=colors_map[cat],
                              fontweight="bold", zorder=4))
     adjust_text(texts, ax=ax, arrowprops=dict(arrowstyle="-", color="#aaaaaa", lw=0.4),
-                expand=(1.4, 1.6), force_text=(0.4, 0.5))
+                expand=(1.7, 1.7), force_text=(2, 2))
 except ImportError:
     # Fallback: no adjustText
     for gene, cat in label_genes.items():
@@ -121,21 +121,25 @@ except ImportError:
                     textcoords="offset points", xytext=(4, 4))
 
 # Diagonal
-lim = max(abs(merged["delta_indirect"]).max(), abs(merged["g_direct"]).max()) * 1.05
+lim = max(abs(merged["delta_indirect"]).max(), abs(merged["g_direct"]).max())
 ax.plot([-lim, lim], [-lim, lim], "k--", lw=0.6, alpha=0.4, zorder=0)
-ax.axhline(0, color="#cccccc", lw=0.5, zorder=0)
-ax.axvline(0, color="#cccccc", lw=0.5, zorder=0)
+ax.axhline(0, color="#bdc3c7", lw=0.5, zorder=0)
+ax.axvline(0, color="#bdc3c7", lw=0.5, zorder=0)
 
 ax.set_xlabel(r"Indirect difference ($g_{\mathrm{UC\,vs\,HC}}$ − $g_{\mathrm{CD\,vs\,HC}}$)", fontsize=9)
 ax.set_ylabel(r"Direct comparison ($g_{\mathrm{UC\,vs\,CD}}$)", fontsize=9)
 ax.set_title(f"Gene-level concordance (Pearson r = {r:.2f})", fontsize=10)
 ax.tick_params(labelsize=8)
 
+plot_lim = 1.8
+ax.set_xlim(-plot_lim, plot_lim)
+ax.set_ylim(-plot_lim, plot_lim)
+
 # Legend
 from matplotlib.lines import Line2D
 legend_elements = [
-    Line2D([0], [0], marker="o", color="w", markerfacecolor="#2166ac", markersize=6, label="Metabolic"),
-    Line2D([0], [0], marker="o", color="w", markerfacecolor="#b2182b", markersize=6, label="Immune"),
+    Line2D([0], [0], marker="o", color="w", markerfacecolor="#2471a3", markersize=6, label="Metabolic"),
+    Line2D([0], [0], marker="o", color="w", markerfacecolor="#c0392b", markersize=6, label="Immune"),
     Line2D([0], [0], marker="o", color="w", markerfacecolor="#4d4d4d", markersize=6, label="Other"),
 ]
 ax.legend(handles=legend_elements, fontsize=7, loc="upper left", framealpha=0.8)

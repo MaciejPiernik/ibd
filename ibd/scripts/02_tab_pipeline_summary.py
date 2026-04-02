@@ -2,11 +2,12 @@
 """Generate a three-way pipeline summary table (UC inflamed, UC uninflamed, CD).
 
 Usage:
-    python generate_pipeline_summary.py \
-        --uc-dir results/uc_vs_hc \
-        --uninfl-dir results/uninf_vs_hc \
-        --cd-dir results/cd_vs_hc \
-        --output-tex tables/pipeline_summary.tex
+    python ibd/scripts/02_tab_pipeline_summary.py \
+        --uc-dir results/paper/uc_vs_hc \
+        --uninfl-dir results/paper/uninf_vs_hc \
+        --cd-dir results/paper/cd_vs_hc \
+        --uccd-dir results/paper/uc_vs_cd \
+        --output-tex results/paper/pipeline_summary.tex
 """
 import argparse, os
 import pandas as pd
@@ -15,8 +16,20 @@ import pandas as pd
 def load_analysis(d, disease_col="n_uc"):
     ds = pd.read_csv(os.path.join(d, "dataset_summary.csv"))
     meta = pd.read_csv(os.path.join(d, "gene_meta_all.csv"), encoding="latin1")
-    sig = pd.read_csv(os.path.join(d, "gene_meta_significant.csv"), encoding="latin1")
-    pw_sig = pd.read_csv(os.path.join(d, "pathway_meta_significant.csv"), encoding="latin1")
+
+    min_datasets = meta['datasets'].max() / 2
+    sig = meta[
+        (meta['datasets'] >= min_datasets)
+        & (meta['direction_ratio'] >= 0.8)
+        & (meta['q_value'] < 0.05)
+    ]
+    pw = pd.read_csv(os.path.join(d, "pathway_meta_all.csv"), encoding="latin1")
+
+    pw_sig = pw[
+        (pw['datasets'] >= min_datasets)
+        & (pw['direction_ratio'] >= 0.8)
+        & (pw['q_value'] < 0.05)
+    ]
 
     knee_path = os.path.join(d, "pathway_meta_significant_knee_with_clusters.csv")
     pw_knee = pd.read_csv(knee_path, encoding="latin1") if os.path.exists(knee_path) else None
@@ -25,7 +38,7 @@ def load_analysis(d, disease_col="n_uc"):
     clusters = pd.read_csv(cl_path, encoding="latin1") if os.path.exists(cl_path) else None
 
     n_disease = ds[disease_col].sum()
-    n_ctrl = ds["n_ctrl"].sum()
+    n_ctrl = ds["n_ctrl"].sum() if "n_ctrl" in ds.columns else ds["n_cd"].sum() # for direct UC vs CD, "n_cd" column is used instead of "n_ctrl"
 
     return {
         "datasets": len(ds),
@@ -58,12 +71,14 @@ def main():
     p.add_argument("--uc-dir", required=True)
     p.add_argument("--uninfl-dir", required=True)
     p.add_argument("--cd-dir", required=True)
+    p.add_argument("--uccd-dir", required=True)
     p.add_argument("--output-tex", required=True)
     args = p.parse_args()
 
     uc = load_analysis(args.uc_dir, "n_uc")
     un = load_analysis(args.uninfl_dir, "n_uc")
     cd = load_analysis(args.cd_dir, "n_cd")
+    uccd = load_analysis(args.uccd_dir, "n_uc")
 
     rows = [
         ("Datasets", "datasets"),
@@ -87,21 +102,23 @@ def main():
         v_uc = fmt(uc[key])
         v_un = fmt(un[key])
         v_cd = fmt(cd[key])
-        lines.append(f"  {label} & {v_uc} & {v_un} & {v_cd} \\\\")
+        v_uccd = fmt(uccd[key])
+        lines.append(f"  {label} & {v_uc} & {v_un} & {v_cd} & {v_uccd} \\\\")
 
     table = (
         "\\begin{table}[t]\n"
         "\\centering\n"
         "\\scriptsize\n"
         "\\renewcommand{\\arraystretch}{1.15}\n"
-        "\\begin{tabular}{lrrr}\n"
+        "\\begin{tabular}{lrrrr}\n"
         "\\hline\n"
-        " & UC inflamed & UC uninflamed & CD inflamed \\\\\n"
+        " & UC inf. & UC uninf. & CD inf. & UC vs CD \\\\\n"
         "\\hline\n"
         + "\n".join(lines) + "\n"
         "\\hline\n"
         "\\end{tabular}\n"
-        "\\caption{Summary of the three parallel meta-analyses. "
+        "\\caption{Summary of the four parallel meta-analyses. "
+        "Summary of the four parallel meta-analyses. For the three disease vs control comparisons, upregulated/downregulated refers to the direction in disease relative to healthy controls. For the direct UC\,vs\,CD comparison, upregulated means higher in UC and downregulated means lower in UC relative to CD. "
         "Significant genes: random-effects meta-analysis, $q < 0.05$, "
         "direction consistency $\\geq 80\\%$. "
         "Pathway filtering: knee-point on ranked $|\\mathrm{NES}|$; "
@@ -114,7 +131,7 @@ def main():
         f.write(table)
 
     print(f"Written: {args.output_tex}")
-    for label, d in [("UC", uc), ("Uninfl", un), ("CD", cd)]:
+    for label, d in [("UC", uc), ("Uninfl", un), ("CD", cd), ("UC vs CD", uccd)]:
         print(f"  {label}: {d['datasets']} datasets, {d['genes_sig']} genes, "
               f"{d['pw_knee']} knee pathways, {d['clusters']} clusters")
 

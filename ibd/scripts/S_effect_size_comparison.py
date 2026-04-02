@@ -13,7 +13,7 @@ Outputs:
   3. Printed summary to stdout
 
 Usage:
-    python ibd/scripts/compare_inflamed_uninflamed.py \
+    python ibd/scripts/0X_effect_size_comparison.py \
         --inflamed   results/paper/uc_vs_hc/gene_meta_all.csv \
         --uninflamed results/paper/uninf_vs_hc/gene_meta_all.csv \
         --output-dir results/paper/

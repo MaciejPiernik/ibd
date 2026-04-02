@@ -390,4 +390,3 @@ for g in mito_genes:
         print(f"  {g}: g_infl={r.hedges_g_infl:.2f}, g_uninfl={r.hedges_g_uninfl:.2f}")
 
 print("\nDone.")
-EOF

@@ -1,7 +1,6 @@
 geo_cache/
 geo_datasets/
 papers/
-paper/
 .Rhistory
 __pycache__/
 /.vscode/
@@ -15,3 +14,7 @@ data/wgs_all.csv
 ibd-env/
 key.txt
 ibd.egg-info/
+output/
+figures/
+tables/
+results/
