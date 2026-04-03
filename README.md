@@ -1,4 +1,4 @@
-# IBD Meta-Analysis
+# Ulcerative Colitis Meta-Analysis
 
 Code for the paper: **"Large-scale transcriptomic meta-analysis identifies novel therapeutic targets for ulcerative colitis"**
 
