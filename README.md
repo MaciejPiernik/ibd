@@ -1,6 +1,6 @@
 # IBD Meta-Analysis
 
-Code for the paper: **"A Multi-Level Meta-Analysis of Transcriptomic Data Reveals Constitutive and Inflammation-Dependent Dysregulation in Inflammatory Bowel Disease"**
+Code for the paper: **"Large-scale transcriptomic meta-analysis identifies novel therapeutic targets for ulcerative colitis"**
 
 This repository implements the complete analytical pipeline: from downloading and processing GEO microarray datasets, through differential expression and pathway enrichment, to random-effects meta-analysis, pathway clustering, cross-comparison synthesis, and generation of all paper figures and tables.
 
