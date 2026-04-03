@@ -165,8 +165,7 @@ ibd/
 └── scripts/                        # Post-processing, figures, and tables (see above)
 
 data/
-├── DAQ.csv                         # Dataset acquisition table (accession numbers, platforms)
-└── geo_cache/                      # Cached GEO downloads
+└── DAQ.csv                         # Dataset acquisition table (accession numbers, platforms)
 
 db/                                 # Processed expression + metadata files
 
