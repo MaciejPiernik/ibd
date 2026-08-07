@@ -107,10 +107,9 @@ def main():
         x = row["hedges_g"].values[0]
         y = row["neg_log10_q"].values[0]
         color = LABEL_UP_COLOR if gene in LABEL_GENES_UP else LABEL_DOWN_COLOR
-        ax.scatter(x, y, s=18, c=color, zorder=5, linewidths=0.4,
+        ax.scatter(x, y, s=18, c=color, zorder=5, linewidths=0.6,
                    edgecolors="white")
-        texts.append(ax.text(x, y, gene, fontsize=6.5, color=color,
-                             fontstyle="italic", fontweight="medium"))
+        texts.append(ax.text(x, y, gene, fontsize=6, color=color, fontweight="bold"))
 
     adjust_text(texts, ax=ax, arrowprops=dict(arrowstyle="-", color="0.5", lw=0.4), force_text=(0.4, 0.6), expand=(1.2, 1.4))
 
@@ -118,16 +117,16 @@ def main():
     ax.axhline(-np.log10(0.05), color="0.6", ls="--", lw=0.5)
 
     # ── counts annotation ─────────────────────────────────────────────────
-    n_up = up.sum()
-    n_down = down.sum()
-    ax.text(0.98, 0.97,
-            f"{n_up:,} up\n{n_down:,} down",
-            transform=ax.transAxes, ha="right", va="top", fontsize=8,
-            bbox=dict(facecolor="white", edgecolor="0.7", pad=3, lw=0.5))
+    # n_up = up.sum()
+    # n_down = down.sum()
+    # ax.text(0.98, 0.97,
+    #         f"{n_up:,} up\n{n_down:,} down",
+    #         transform=ax.transAxes, ha="right", va="top", fontsize=8,
+    #         bbox=dict(facecolor="white", edgecolor="0.7", pad=3, lw=0.5))
 
     ax.set_xlabel("Hedges' $g$ (meta-analytic effect size)")
-    ax.set_ylabel("$-\\log_{10}\\,q$")
-    ax.set_title("Inflamed UC vs controls — gene-level meta-analysis",
+    ax.set_ylabel("$-log_{10}\\,q$")
+    ax.set_title("Inflamed UC vs controls - gene-level meta-analysis",
                  fontsize=10, fontweight="bold", pad=8)
 
     # keep axes symmetric and tidy

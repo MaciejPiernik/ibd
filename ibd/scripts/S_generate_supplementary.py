@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-generate_supplementary.py
+python ibd/scripts/S_generate_supplementary.py
 
 Master script to generate ALL supplementary materials for the UC meta-analysis paper.
 
@@ -873,8 +873,8 @@ def build_supplementary_latex(fig_dir, output_dir, data_dir,
 \renewcommand{\thetable}{S\arabic{table}}
 
 \title{\textbf{Supplementary Materials}\\[0.3em]
-\large Constitutive and inflammation-dependent transcriptomic signatures\\
-in ulcerative colitis: a multi-cohort meta-analysis of mucosal biopsies}
+\large Large-scale transcriptomic meta-analysis identifies\\
+    constitutive and inflammation-dependent signatures in ulcerative colitis}
 \author{Piernik et al.}
 \date{}
 

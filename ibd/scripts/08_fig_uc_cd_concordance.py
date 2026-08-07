@@ -94,8 +94,7 @@ for gene, cat in label_genes.items():
     if row.empty:
         continue
     x, y = row.delta_indirect.values[0], row.g_direct.values[0]
-    ax.scatter(x, y, s=30, color=colors_map[cat], edgecolors="white",
-               linewidths=0.3, zorder=3)
+    ax.scatter(x, y, s=30, color=colors_map[cat], edgecolors="white", linewidths=0.3, zorder=3)
 
 # Labels with manual nudge
 try:
@@ -106,7 +105,7 @@ try:
         if row.empty:
             continue
         x, y = row.delta_indirect.values[0], row.g_direct.values[0]
-        texts.append(ax.text(x, y, gene, fontsize=5.5, color=colors_map[cat],
+        texts.append(ax.text(x, y, gene, fontsize=6, color=colors_map[cat],
                              fontweight="bold", zorder=4))
     adjust_text(texts, ax=ax, arrowprops=dict(arrowstyle="-", color="#aaaaaa", lw=0.4),
                 expand=(1.7, 1.7), force_text=(2, 2))
