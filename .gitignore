@@ -19,3 +19,5 @@ figures/
 tables/
 results/
 data/
+db_rnaseq/
+db_rnaseq_raw/
