@@ -22,8 +22,21 @@ DEFAULT_GENESET_LIBRARIES = ['Reactome_2022']
 GROUP_1 = 'UC'
 INFLAMMATION_1 = 'Inflamed'
 
-GROUP_2 = 'UC'
+GROUP_2 = 'Ctrl'
 INFLAMMATION_2 = 'Uninflamed'
+
+
+def _arm_labels():
+    """Labels identifying the two arms of the comparison.
+
+    When both arms come from the same disease group, as in inflamed versus
+    uninflamed UC, the disease name alone cannot tell them apart, so the
+    inflammation status is appended.
+    """
+    if GROUP_1 == GROUP_2:
+        return f'{GROUP_1}_{INFLAMMATION_1}', f'{GROUP_2}_{INFLAMMATION_2}'
+
+    return GROUP_1, GROUP_2
 
 
 # ===================================================================
@@ -76,12 +89,15 @@ def _select_uc_vs_ctrl(metadata: pd.DataFrame) -> pd.Series:
     # isolated colonocyte preparations, which are not whole mucosa. Samples whose
     # tissue was not annotated are retained, as they come from colonic studies.
     is_colon = ~metadata['tissue'].astype(str).str.lower().isin(['ileum', 'colonocytes'])
-    mask = (
-        ((metadata['disease'] == GROUP_1) & (metadata['inflammation'] == INFLAMMATION_1))
-        | ((metadata['disease'] == GROUP_2) & (metadata['inflammation'] == INFLAMMATION_2))
-    ) & time_ok & is_colon
+    label_1, label_2 = _arm_labels()
+    in_arm_1 = (metadata['disease'] == GROUP_1) & (metadata['inflammation'] == INFLAMMATION_1)
+    in_arm_2 = (metadata['disease'] == GROUP_2) & (metadata['inflammation'] == INFLAMMATION_2)
 
-    return metadata.loc[mask, 'disease']
+    labels = pd.Series(np.nan, index=metadata.index, dtype=object)
+    labels[in_arm_2 & time_ok & is_colon] = label_2
+    labels[in_arm_1 & time_ok & is_colon] = label_1
+
+    return labels.dropna()
 
 
 def _collapse_duplicate_genes(data: pd.DataFrame) -> pd.DataFrame:
@@ -122,8 +138,9 @@ def _limma_moderated_t(data: pd.DataFrame, labels: pd.Series) -> pd.DataFrame:
         n_genes = len(gene_names)
         n_samples = len(data)
 
-        # Group vector: 0=GROUP_2, 1=GROUP_1
-        group = ro.IntVector([1 if labels.loc[s] == GROUP_1 else 0 for s in data.index])
+        # Group vector: 0=second arm, 1=first arm
+        label_1, _ = _arm_labels()
+        group = ro.IntVector([1 if labels.loc[s] == label_1 else 0 for s in data.index])
         ro.globalenv['group'] = group
 
         # Build design matrix in R
@@ -194,8 +211,9 @@ def _compute_gene_stats(data: pd.DataFrame, labels: pd.Series) -> pd.DataFrame:
       - t_stat: for GSEA preranking (limma moderated t)
       - hedges_g + hedges_g_var: always from raw group statistics (for meta-analysis)
     """
-    disease_mask = labels == GROUP_1
-    ctrl_mask = labels == GROUP_2
+    label_1, label_2 = _arm_labels()
+    disease_mask = labels == label_1
+    ctrl_mask = labels == label_2
 
     # --- Raw statistics for Hedges' g (always needed) ---
     raw_results = {}
@@ -212,10 +230,10 @@ def _compute_gene_stats(data: pd.DataFrame, labels: pd.Series) -> pd.DataFrame:
 
         raw_results[gene] = {
             'gene': gene,
-            f'n_{GROUP_1.lower()}': n_disease,
-            f'n_{GROUP_2.lower()}': n_ctrl,
-            f'mean_{GROUP_1.lower()}': mean_disease,
-            f'mean_{GROUP_2.lower()}': mean_ctrl,
+            f'n_{label_1.lower()}': n_disease,
+            f'n_{label_2.lower()}': n_ctrl,
+            f'mean_{label_1.lower()}': mean_disease,
+            f'mean_{label_2.lower()}': mean_ctrl,
             f'mean_diff': mean_disease - mean_ctrl,
             'hedges_g': g,
             'hedges_g_var': g_var,
@@ -695,9 +713,10 @@ def experiment(config: ExperimentConfig) -> None:
 
     dataset = _collapse_duplicate_genes(dataset)
 
+    label_1, label_2 = _arm_labels()
     labels = _select_uc_vs_ctrl(metadata)
     if labels.empty:
-        logging.warning(f'No samples matched the {GROUP_1} vs {GROUP_2} selection criteria')
+        logging.warning(f'No samples matched the {label_1} vs {label_2} selection criteria')
         return
 
     dataset = dataset.loc[labels.index]
@@ -717,14 +736,14 @@ def experiment(config: ExperimentConfig) -> None:
         ds_labels = labels.loc[ds_mask]
 
         n_total = len(ds_data)
-        n_group_1 = int((ds_labels == GROUP_1).sum())
-        n_group_2 = int((ds_labels == GROUP_2).sum())
+        n_group_1 = int((ds_labels == label_1).sum())
+        n_group_2 = int((ds_labels == label_2).sum())
 
         if n_total < config.min_samples or n_group_1 < config.min_per_group or n_group_2 < config.min_per_group:
-            logging.info('Skipping %s (%d/%d): n=%d %s=%d %s=%d', ds_name, idx, len(dataset_names), n_total, GROUP_1, n_group_1, GROUP_2, n_group_2)
+            logging.info('Skipping %s (%d/%d): n=%d %s=%d %s=%d', ds_name, idx, len(dataset_names), n_total, label_1, n_group_1, label_2, n_group_2)
             continue
 
-        logging.info('Processing %s (%d/%d): n=%d %s=%d %s=%d', ds_name, idx, len(dataset_names), n_total, GROUP_1, n_group_1, GROUP_2, n_group_2)
+        logging.info('Processing %s (%d/%d): n=%d %s=%d %s=%d', ds_name, idx, len(dataset_names), n_total, label_1, n_group_1, label_2, n_group_2)
 
         gene_stats = _compute_gene_stats(ds_data, ds_labels)
         if gene_stats.empty:
@@ -741,8 +760,8 @@ def experiment(config: ExperimentConfig) -> None:
         dataset_summaries.append({
             'dataset': ds_name,
             'n_total': n_total,
-            f'n_{GROUP_1.lower()}': n_group_1,
-            f'n_{GROUP_2.lower()}': n_group_2,
+            f'n_{label_1.lower()}': n_group_1,
+            f'n_{label_2.lower()}': n_group_2,
             'n_genes_tested': len(gene_stats),
             'n_sig_genes_fdr05': int((gene_stats['q_value'] < 0.05).sum()),
         })

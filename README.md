@@ -87,6 +87,12 @@ keyed by gene symbol.
 | `results/paper/uc_vs_cd` | microarray | UC / Inflamed | CD / Inflamed | 6 | 3 |
 | `results/revision_v2/rnaseq_uc_vs_hc` | rnaseq | UC / Inflamed | Ctrl / Uninflamed | 8 | 4 |
 | `results/revision_v2/rnaseq_uninf_vs_hc` | rnaseq | UC / Uninflamed | Ctrl / Uninflamed | 3 | 2 |
+| `results/revision_v2/infl_vs_uninfl` | microarray | UC / Inflamed | UC / Uninflamed | 6 | 3 |
+| `results/revision_v2/rnaseq_infl_vs_uninfl` | rnaseq | UC / Inflamed | UC / Uninflamed | 2 | 1 |
+
+When both arms come from the same disease group, as in the last two rows, the
+arms are labelled by disease and inflammation status together so that they can be
+told apart.
 
 ```bash
 python -m ibd run-experiment \
@@ -144,6 +150,9 @@ python ibd/scripts/S_effect_size_comparison.py \
 
 # Compare significant pathways between inflamed and uninflamed analyses
 python ibd/scripts/S_compare_pathways.py
+
+# Classify genes into layers using the direct inflamed-vs-uninflamed contrast
+python ibd/scripts/S_classify_layers.py
 ```
 
 ### Step 5: Generate figures and tables
