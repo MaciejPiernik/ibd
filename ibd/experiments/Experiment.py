@@ -72,7 +72,10 @@ def _standardize_metadata(metadata: pd.DataFrame) -> pd.DataFrame:
 
 def _select_uc_vs_ctrl(metadata: pd.DataFrame) -> pd.Series:
     time_ok = metadata['time_of_biopsy'].isna() | metadata['time_of_biopsy'].isin(['W0', 'Before'])
-    is_colon = ~(metadata['tissue'].str.lower() == 'ileum')
+    # Colonic or rectal mucosal biopsies only. Ileal samples are excluded, as are
+    # isolated colonocyte preparations, which are not whole mucosa. Samples whose
+    # tissue was not annotated are retained, as they come from colonic studies.
+    is_colon = ~metadata['tissue'].astype(str).str.lower().isin(['ileum', 'colonocytes'])
     mask = (
         ((metadata['disease'] == GROUP_1) & (metadata['inflammation'] == INFLAMMATION_1))
         | ((metadata['disease'] == GROUP_2) & (metadata['inflammation'] == INFLAMMATION_2))

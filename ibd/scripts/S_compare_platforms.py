@@ -20,7 +20,7 @@ import os
 import numpy as np
 import pandas as pd
 
-MICRO = 'results/paper'
+MICRO = 'results/revision_v2'
 RNA = 'results/revision_v2'
 OUT = 'results/revision_v2/comparison'
 

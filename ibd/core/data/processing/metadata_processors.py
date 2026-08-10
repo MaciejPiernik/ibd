@@ -478,10 +478,10 @@ class GSE10616_MetadataProcessor:
         INFLAMMATION = None
         MAYO_SCORE = None
 
-        result = pd.DataFrame()
+        result = pd.DataFrame(index=metadata.index)
 
-        result['patient_id'] = metadata.index.tolist()
-        result['disease'] = metadata[DISEASE].map(lambda x: 'CD' if ' CD ' in x else 'UC' if 'Ulcerative colitis' in x else 'Ctrl' if 'Healthy' in x else None).tolist()
+        result['patient_id'] = metadata.index
+        result['disease'] = metadata[DISEASE].map(lambda x: 'CD' if ' CD ' in x else 'UC' if 'Ulcerative colitis' in x else 'Ctrl' if 'Healthy' in x else None)
         result['treatment'] = None
         result['response'] = None
         result['time_of_biopsy'] = None
@@ -503,15 +503,15 @@ class GSE13367_MetadataProcessor:
         INFLAMMATION = 'title'
         MAYO_SCORE = None
 
-        result = pd.DataFrame()
+        result = pd.DataFrame(index=metadata.index)
 
-        result['patient_id'] = metadata[PATIENT_ID].str.extract(r'^Patient\s+(\d+)')[0].tolist()
-        result['disease'] = metadata[DISEASE].map(lambda x: 'UC' if ' UC ' in x else 'Ctrl' if 'Control' in x else 'Ctrl' if 'Healthy' in x else None).tolist()
+        result['patient_id'] = metadata[PATIENT_ID].str.extract(r'^Patient\s+(\d+)')[0]
+        result['disease'] = metadata[DISEASE].map(lambda x: 'UC' if ' UC ' in x else 'Ctrl' if 'Control' in x else 'Ctrl' if 'Healthy' in x else None)
         result['treatment'] = None
         result['response'] = None
         result['time_of_biopsy'] = None
-        result['tissue'] = metadata[TISSUE].map(lambda x: 'Colon' if 'biopsy' in x.lower() else 'Colonocytes').tolist()
-        result['inflammation'] = metadata[INFLAMMATION].map(lambda x: 'Inflamed' if 'inflamed' in x else 'Uninflamed').tolist()
+        result['tissue'] = metadata[TISSUE].map(lambda x: 'Colon' if 'biopsy' in x.lower() else 'Colonocytes')
+        result['inflammation'] = metadata[INFLAMMATION].map(lambda x: 'Inflamed' if 'inflamed' in x else 'Uninflamed')
         result['mayo_score'] = None
 
         return result
@@ -528,15 +528,15 @@ class GSE38713_MetadataProcessor:
         INFLAMMATION = 'source_name_ch1'
         MAYO_SCORE = None
 
-        result = pd.DataFrame()
+        result = pd.DataFrame(index=metadata.index)
 
-        result['patient_id'] = metadata[PATIENT_ID].str.extract(r'[a-zA-Z](\d+\.?\d*)')[0].tolist()
-        result['disease'] = metadata[DISEASE].map(lambda x: 'UC' if ' UC ' in x else 'Ctrl' if 'control' in x else None).tolist()
+        result['patient_id'] = metadata[PATIENT_ID].str.extract(r'[a-zA-Z](\d+\.?\d*)')[0]
+        result['disease'] = metadata[DISEASE].map(lambda x: 'UC' if ' UC ' in x else 'Ctrl' if 'control' in x else None)
         result['treatment'] = None
         result['response'] = None
         result['time_of_biopsy'] = None
         result['tissue'] = 'Colon'
-        result['inflammation'] = metadata[INFLAMMATION].map(lambda x: 'Inflamed' if '(involved mucosa)' in x else 'Uninflamed').tolist()
+        result['inflammation'] = metadata[INFLAMMATION].map(lambda x: 'Inflamed' if '(involved mucosa)' in x else 'Uninflamed')
         result['mayo_score'] = None
 
         return result

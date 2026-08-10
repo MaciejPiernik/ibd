@@ -20,6 +20,7 @@ Usage:
 """
 
 import argparse
+import math
 import os
 
 import numpy as np
@@ -72,17 +73,22 @@ def main():
     merged.loc[mask, 'delta_q'] = _bh_correction(merged.loc[mask, 'delta_p'].values)
 
     # Classification
-    # Significance in each analysis
-    # Inflamed: q<0.05, direction consistency >=0.8, present in >=50% datasets (6/12)
-    # Uninflamed: q<0.05, present in >=50% datasets (3/5)
+    # Significance in each analysis: q<0.05, direction consistency >=0.8 for the
+    # inflamed side, and presence in >=50% of that analysis's cohorts. The cohort
+    # count is taken from the data so the thresholds follow whichever run is given.
+    min_infl = math.ceil(merged['datasets_infl'].max() / 2)
+    min_uninfl = math.ceil(merged['datasets_uninfl'].max() / 2)
+    print(f'Presence threshold: >= {min_infl} of {int(merged["datasets_infl"].max())} inflamed '
+          f'cohorts, >= {min_uninfl} of {int(merged["datasets_uninfl"].max())} uninflamed')
+
     merged['sig_infl'] = (
         (merged['q_value_infl'] < 0.05)
         & (merged['direction_ratio_infl'] >= 0.8)
-        & (merged['datasets_infl'] >= 6)
+        & (merged['datasets_infl'] >= min_infl)
     )
     merged['sig_uninfl'] = (
         (merged['q_value_uninfl'] < 0.05)
-        & (merged['datasets_uninfl'] >= 3)
+        & (merged['datasets_uninfl'] >= min_uninfl)
     )
 
     # Categories

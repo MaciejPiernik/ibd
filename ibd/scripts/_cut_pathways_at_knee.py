@@ -1,9 +1,13 @@
+import sys
+
 import pandas as pd
 
 from kneefinder import KneeFinder
 
 
-DIRS = ['results/paper/uc_vs_cd/', 'results/paper/uc_vs_hc/', 'results/paper/uninf_vs_hc/', 'results/paper/cd_vs_hc/']
+# Directories may be given on the command line; otherwise the published run is used.
+DIRS = sys.argv[1:] or ['results/paper/uc_vs_cd/', 'results/paper/uc_vs_hc/',
+                        'results/paper/uninf_vs_hc/', 'results/paper/cd_vs_hc/']
 
 for dir in DIRS:
     df = pd.read_csv(f'{dir}pathway_meta_all.csv')
