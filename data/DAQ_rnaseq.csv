@@ -1,0 +1,19 @@
+Accession number;Platform;No samples;Disease;Treatment;Processed
+GSE193677;RNA-seq;2490;CD, UC, control;;Yes
+GSE57945;RNA-seq;322;CD, control;;Ileal biopsies only
+GSE109142;RNA-seq;226;UC, control;;Yes
+GSE137344;RNA-seq;195;CD, UC, control;;Ileal biopsies only
+GSE117993;RNA-seq;190;CD, UC, control;;Yes
+GSE165512;RNA-seq;170;CD, UC, control;;Yes
+GSE83687;RNA-seq;134;CD, UC, control;;Surgical resection specimens, not mucosal biopsies
+GSE166925;RNA-seq;96;CD, UC, control;;Surgical resection specimens, not mucosal biopsies
+GSE95437;RNA-seq;94;CD, UC, control;;No gene-level quantification deposited (CAGE tag coordinates only)
+GSE81266;RNA-seq;77;UC;;Ileal pouch tissue, not colonic mucosa
+GSE128682;RNA-seq;44;UC, control;;Yes
+GSE164918;RNA-seq;36;UC, control;;Yes
+GSE266325;RNA-seq;23;CD, UC, control;;Yes
+GSE224758;RNA-seq;22;UC, control;;Yes
+GSE135223;RNA-seq;18;CD, control;;Isolated macrophages, not whole mucosa
+GSE334803;RNA-seq;12;UC, control;;Yes
+GSE296485;RNA-seq;9;UC, control;;No expression matrix deposited (differential expression list only)
+GSE277415;RNA-seq;6;CD, UC, control;;Sorted epithelial and lamina propria populations

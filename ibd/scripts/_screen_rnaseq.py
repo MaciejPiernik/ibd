@@ -18,8 +18,8 @@ Stage 1 excludes on the study description. Stage 2 required reading the sample
 metadata and the deposited files, and those decisions are recorded explicitly in
 DECISIONS below so the screen can be audited.
 
-Writes the screening table and caches each candidate's series matrix header,
-which prepare_rnaseq.py then reads.
+Writes the screening table. The datasets it retains are the ones listed in
+data/DAQ_rnaseq.csv and built by `run-pipeline --source rnaseq`.
 
 Run:
     python ibd/scripts/screen_rnaseq.py
@@ -42,7 +42,7 @@ QUERY = ('("ulcerative colitis"[All Fields] OR "inflammatory bowel disease"[All 
          'AND gse[Entry Type]')
 EUTILS = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils'
 GEO = 'https://ftp.ncbi.nlm.nih.gov/geo/series'
-HEADERS = 'data/geo_rnaseq_headers'
+HEADERS = 'data/geo_cache_rnaseq'
 OUTPUT = 'results/revision_v2'
 
 # First matching rule is the recorded reason for exclusion.

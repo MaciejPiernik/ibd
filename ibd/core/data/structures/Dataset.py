@@ -96,6 +96,10 @@ class Dataset:
         class_ = getattr(ibd.core.data.processing.metadata_processors, f'{self.id}_MetadataProcessor')
 
         return class_()
+
+
+    def has_processor(self):
+        return hasattr(ibd.core.data.processing.metadata_processors, f'{self.id}_MetadataProcessor')
     
 
     def data_in_db(self):

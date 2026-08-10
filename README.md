@@ -36,11 +36,21 @@ BiocManager::install("limma")
 
 ### Step 1: Download and process data
 
-The data processing pipeline downloads datasets from GEO, maps probes to genes, and harmonizes metadata. Dataset definitions are in `data/DAQ.csv`.
+The data processing pipeline downloads datasets from GEO, maps probes or transcript
+identifiers to genes, and harmonizes metadata.
+
+Two corpora are processed, selected with `--source`. The microarray corpus is the
+discovery set; the RNA-seq corpus is the independent validation set (see Step 6).
+
+| `--source` | Dataset definitions | Written to |
+|---|---|---|
+| `microarray` (default) | `data/DAQ.csv` | `db/` |
+| `rnaseq` | `data/DAQ_rnaseq.csv` | `db_rnaseq/` |
 
 ```bash
-# Process all datasets
+# Process all datasets of a corpus
 python -m ibd run-pipeline
+python -m ibd run-pipeline --source rnaseq
 
 # Process specific datasets
 python -m ibd run-pipeline -d GSE11223,GSE75214,GSE6731
@@ -50,29 +60,40 @@ python -m ibd run-pipeline -r   # recompute expression data
 python -m ibd run-pipeline -m   # recompute metadata
 ```
 
-Processed data is saved to the `db/` directory as parquet (expression) and CSV (metadata) files.
+Both corpora are saved as parquet (expression, samples x genes on a log2 scale) and
+CSV (metadata) files. Datasets listed in an acquisition table but without a
+processor are reported and skipped, so the tables can also record the candidates
+that were screened out and why.
 
 ### Step 2: Run the meta-analysis experiment
 
-Each of the four comparisons is run separately by editing two things in
+Each comparison is run separately by editing two things in
 `ibd/experiments/Experiment.py` and then running the command below with the
-matching output directory:
+matching `--source` and output directory:
 
 1. the group constants `GROUP_1`, `INFLAMMATION_1`, `GROUP_2`, `INFLAMMATION_2`
 2. `min_datasets` in `ExperimentConfig`, set to 50% of the contributing cohorts
    (rounded up), which is the presence threshold used throughout the paper
 
-| Output directory | GROUP_1 / INFLAMMATION_1 | GROUP_2 / INFLAMMATION_2 | Cohorts | `min_datasets` |
-|---|---|---|---|---|
-| `results/paper/uc_vs_hc` | UC / Inflamed | Ctrl / Uninflamed | 12 | 6 |
-| `results/paper/uninf_vs_hc` | UC / Uninflamed | Ctrl / Uninflamed | 5 | 3 |
-| `results/paper/cd_vs_hc` | CD / Inflamed | Ctrl / Uninflamed | 8 | 4 |
-| `results/paper/uc_vs_cd` | UC / Inflamed | CD / Inflamed | 6 | 3 |
+`--source` selects the corpus: it points the run at `db/` or `db_rnaseq/` and, for
+RNA-seq, skips the Entrez-to-symbol mapping, since those matrices are already
+keyed by gene symbol.
+
+| Output directory | `--source` | GROUP_1 / INFLAMMATION_1 | GROUP_2 / INFLAMMATION_2 | Cohorts | `min_datasets` |
+|---|---|---|---|---|---|
+| `results/paper/uc_vs_hc` | microarray | UC / Inflamed | Ctrl / Uninflamed | 12 | 6 |
+| `results/paper/uninf_vs_hc` | microarray | UC / Uninflamed | Ctrl / Uninflamed | 5 | 3 |
+| `results/paper/cd_vs_hc` | microarray | CD / Inflamed | Ctrl / Uninflamed | 8 | 4 |
+| `results/paper/uc_vs_cd` | microarray | UC / Inflamed | CD / Inflamed | 6 | 3 |
+| `results/revision_v2/rnaseq_uc_vs_hc` | rnaseq | UC / Inflamed | Ctrl / Uninflamed | 8 | 4 |
+| `results/revision_v2/rnaseq_uninf_vs_hc` | rnaseq | UC / Uninflamed | Ctrl / Uninflamed | 3 | 2 |
 
 ```bash
 python -m ibd run-experiment \
-    --data-dir ./db \
     --output-dir results/paper/uc_vs_hc
+
+python -m ibd run-experiment --source rnaseq \
+    --output-dir results/revision_v2/rnaseq_uc_vs_hc
 ```
 
 The experiment produces:
@@ -151,35 +172,36 @@ python ibd/scripts/S_generate_supplementary.py --data-dir results/paper/  # Full
 
 ### Step 6: RNA-seq validation
 
-The microarray results are validated against independent RNA-seq cohorts. The
-validation set is every RNA-seq dataset in GEO that satisfies the same inclusion
-criteria as the discovery analysis, so the four steps below reproduce it from the
-GEO search onwards. The meta-analysis pipeline itself is used unchanged.
+The microarray results are validated against independent RNA-seq cohorts, using
+the same pipeline throughout: only `--source rnaseq` differs.
+
+The validation set is every RNA-seq dataset in GEO satisfying the same inclusion
+criteria as the discovery analysis, so that it is exhaustive rather than a
+selection. `_screen_rnaseq.py` reproduces that screen from the GEO search onwards
+and writes `results/revision_v2/rnaseq_screening.csv` (258 candidates, 9
+included). Its outcome is already recorded in `data/DAQ_rnaseq.csv`, so re-running
+it is only necessary to re-derive the screen.
 
 ```bash
-# 1. Screen GEO: search, apply the inclusion criteria, cache series metadata.
-#    Writes results/revision_v2/rnaseq_screening.csv (258 candidates -> 9 included)
-python ibd/scripts/screen_rnaseq.py
+# Optional: re-run the GEO screen that defines the validation set
+python ibd/scripts/_screen_rnaseq.py
 
-# 2. Download the nine cohorts and write them into db_rnaseq/ in the same
-#    format as the microarray datasets (samples x genes, log2 scale)
-python ibd/scripts/prepare_rnaseq.py
+# 1. Build the nine cohorts into db_rnaseq/
+python -m ibd run-pipeline --source rnaseq
 
-# 3. Run the pipeline over db_rnaseq/ for the inflamed and uninflamed comparisons
-RPY2_CFFI_MODE=ABI python ibd/scripts/run_validation.py
+# 2. Run the two comparisons (see the table in Step 2 for the constants each needs)
+python -m ibd run-experiment --source rnaseq --output-dir results/revision_v2/rnaseq_uc_vs_hc
+python -m ibd run-experiment --source rnaseq --output-dir results/revision_v2/rnaseq_uninf_vs_hc
 
-# 4. Compare the two platforms and report effective cohort counts
-python ibd/scripts/compare_platforms.py
+# 3. Compare the platforms and report effective cohort counts
+python ibd/scripts/S_compare_platforms.py
 ```
 
-Step 3 writes `results/revision_v2/rnaseq_uc_vs_hc/` (8 cohorts, 561 UC vs 383
-controls) and `results/revision_v2/rnaseq_uninf_vs_hc/` (3 cohorts, 300 UC vs 258
-controls), each with the same output files as the discovery runs. Step 4 writes
-gene- and pathway-level concordance tables to `results/revision_v2/comparison/`.
-
-Steps 1 and 2 download roughly 0.5 GB from GEO into `db_rnaseq_raw/` and cache it,
-so re-running is cheap. Step 3 is the slow one; GSEA over eight cohorts takes a
-while.
+Step 1 downloads roughly 0.5 GB from GEO into `db_rnaseq_raw/` and caches it, so
+re-running is cheap. Step 2 is the slow part; GSEA over eight cohorts takes a
+while. Step 3 writes gene- and pathway-level concordance tables to
+`results/revision_v2/comparison/`, together with the effective number of cohorts
+contributing to each meta-analysis, reported for the discovery analyses as well.
 
 ### Utility scripts
 
@@ -193,30 +215,47 @@ python ibd/scripts/_build_reactome_hierarchy.py --pathways <path>
 
 ## Project structure
 
+The two corpora are processed by parallel classes: `Dataset` reads microarray
+series through a per-platform probe-to-gene mapper and a per-dataset metadata
+processor, while `RnaSeqDataset` reads RNA-seq series through a per-dataset
+processor that knows how that study deposited its data. Both write the same
+parquet + CSV pair, so everything downstream is shared.
+
 ```
 ibd/
 ├── __main__.py                     # CLI entry point (run-pipeline, run-experiment)
 ├── core/
 │   ├── data/
-│   │   ├── processing/             # Metadata parsers, normalization
-│   │   ├── structures/Dataset.py   # Dataset class (download, process, store)
+│   │   ├── processing/
+│   │   │   ├── metadata_processors.py   # Per-dataset metadata parsers (microarray)
+│   │   │   └── rnaseq_processors.py     # Per-dataset expression + metadata parsers (RNA-seq)
+│   │   ├── structures/
+│   │   │   ├── Dataset.py               # Microarray series (download, process, store)
+│   │   │   └── RnaSeqDataset.py         # RNA-seq series (download, process, store)
 │   │   └── utils.py                # Data loading utilities
 │   ├── platforms/                   # Platform-specific probe-to-gene mapping (GPL570, GPL6244, etc.)
 │   ├── ensembl/                     # Ensembl gene mapping
 │   └── utils/genes.py              # Entrez ID to gene symbol conversion
 ├── experiments/
-│   ├── experiment.py               # Full experiment pipeline (DE, GSEA, meta-analysis)
+│   ├── Experiment.py               # Full experiment pipeline (DE, GSEA, meta-analysis)
 │   └── Config.py                   # Configuration dataclass
 └── scripts/                        # Post-processing, figures, and tables (see above)
 
 data/
-└── DAQ.csv                         # Dataset acquisition table (accession numbers, platforms)
+├── DAQ.csv                         # Microarray acquisition table (accessions, platforms)
+└── DAQ_rnaseq.csv                  # RNA-seq acquisition table, with screening outcomes
 
-db/                                 # Processed expression + metadata files
+db/                                 # Processed microarray expression + metadata
+db_rnaseq/                          # Processed RNA-seq expression + metadata
 
-results/paper/                      # Experiment outputs
+results/paper/                      # Discovery outputs
 ├── uc_vs_hc/                       # UC inflamed vs healthy controls
 ├── uninf_vs_hc/                    # UC uninflamed vs healthy controls
 ├── cd_vs_hc/                       # CD inflamed vs healthy controls
 └── uc_vs_cd/                       # UC vs CD direct comparison
+
+results/revision_v2/                # Validation outputs
+├── rnaseq_uc_vs_hc/                # UC inflamed vs healthy controls, RNA-seq
+├── rnaseq_uninf_vs_hc/             # UC uninflamed vs healthy controls, RNA-seq
+└── comparison/                     # Cross-platform concordance
 ```

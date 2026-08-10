@@ -4,20 +4,27 @@ papers/
 .Rhistory
 __pycache__/
 /.vscode/
-db/
 .DS_Store
-ibd/notebooks/*.csv
-data/
 .env
-results/enrichr_kegg/
-data/wgs_all.csv
-ibd-env/
 key.txt
+ibd-env/
 ibd.egg-info/
-output/
-figures/
-tables/
-results/
-data/
-db_rnaseq/
-db_rnaseq_raw/
+ibd/notebooks/*.csv
+
+# Processed databases and downloaded source data
+/db/
+/db_rnaseq/
+/db_rnaseq_raw/
+
+# Anchored to the top level: ibd/core/data/ holds source code, not data.
+# The contents are excluded rather than the directory itself, so that the
+# acquisition tables can be re-included.
+/data/*
+!/data/DAQ.csv
+!/data/DAQ_rnaseq.csv
+
+# Generated outputs
+/results/
+/output/
+/figures/
+/tables/
