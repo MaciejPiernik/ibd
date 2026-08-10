@@ -54,7 +54,20 @@ Processed data is saved to the `db/` directory as parquet (expression) and CSV (
 
 ### Step 2: Run the meta-analysis experiment
 
-Each of the four comparisons is run separately by modifying the group constants in `ibd/experiments/experiment.py` (`GROUP_1`, `GROUP_2`, `INFLAMMATION_1`, `INFLAMMATION_2`) and specifying an output directory.
+Each of the four comparisons is run separately by editing two things in
+`ibd/experiments/Experiment.py` and then running the command below with the
+matching output directory:
+
+1. the group constants `GROUP_1`, `INFLAMMATION_1`, `GROUP_2`, `INFLAMMATION_2`
+2. `min_datasets` in `ExperimentConfig`, set to 50% of the contributing cohorts
+   (rounded up), which is the presence threshold used throughout the paper
+
+| Output directory | GROUP_1 / INFLAMMATION_1 | GROUP_2 / INFLAMMATION_2 | Cohorts | `min_datasets` |
+|---|---|---|---|---|
+| `results/paper/uc_vs_hc` | UC / Inflamed | Ctrl / Uninflamed | 12 | 6 |
+| `results/paper/uninf_vs_hc` | UC / Uninflamed | Ctrl / Uninflamed | 5 | 3 |
+| `results/paper/cd_vs_hc` | CD / Inflamed | Ctrl / Uninflamed | 8 | 4 |
+| `results/paper/uc_vs_cd` | UC / Inflamed | CD / Inflamed | 6 | 3 |
 
 ```bash
 python -m ibd run-experiment \
@@ -135,6 +148,38 @@ python ibd/scripts/09_tab_cross_comparison_table.py            # Cross-compariso
 python ibd/scripts/S_generate_figures.py                       # Forest plots, I² diagnostics, Stouffer's check
 python ibd/scripts/S_generate_supplementary.py --data-dir results/paper/  # Full supplementary PDF + CSV tables
 ```
+
+### Step 6: RNA-seq validation
+
+The microarray results are validated against independent RNA-seq cohorts. The
+validation set is every RNA-seq dataset in GEO that satisfies the same inclusion
+criteria as the discovery analysis, so the four steps below reproduce it from the
+GEO search onwards. The meta-analysis pipeline itself is used unchanged.
+
+```bash
+# 1. Screen GEO: search, apply the inclusion criteria, cache series metadata.
+#    Writes results/revision_v2/rnaseq_screening.csv (258 candidates -> 9 included)
+python ibd/scripts/screen_rnaseq.py
+
+# 2. Download the nine cohorts and write them into db_rnaseq/ in the same
+#    format as the microarray datasets (samples x genes, log2 scale)
+python ibd/scripts/prepare_rnaseq.py
+
+# 3. Run the pipeline over db_rnaseq/ for the inflamed and uninflamed comparisons
+RPY2_CFFI_MODE=ABI python ibd/scripts/run_validation.py
+
+# 4. Compare the two platforms and report effective cohort counts
+python ibd/scripts/compare_platforms.py
+```
+
+Step 3 writes `results/revision_v2/rnaseq_uc_vs_hc/` (8 cohorts, 561 UC vs 383
+controls) and `results/revision_v2/rnaseq_uninf_vs_hc/` (3 cohorts, 300 UC vs 258
+controls), each with the same output files as the discovery runs. Step 4 writes
+gene- and pathway-level concordance tables to `results/revision_v2/comparison/`.
+
+Steps 1 and 2 download roughly 0.5 GB from GEO into `db_rnaseq_raw/` and cache it,
+so re-running is cheap. Step 3 is the slow one; GSEA over eight cohorts takes a
+while.
 
 ### Utility scripts
 
