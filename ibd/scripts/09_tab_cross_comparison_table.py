@@ -169,14 +169,15 @@ def main():
     lines.append(
         r"\caption{Cross-comparison gene-level effect sizes for key genes"
         r" discussed in the text. Each column shows the meta-analytic"
-        r" Hedges'~$g$ from one of the four analyses; significance is"
-        r" indicated by stars ($^{*}q < 0.05$, $^{**}q < 0.01$,"
-        r" $^{***}q < 0.001$). Classification: Constit = constitutive"
-        r" (significant in both inflamed and uninflamed analyses, ratio"
-        r" $0.70$--$1.30$); Amplified = inflammation-amplified (significant"
-        r" in both, ratio outside $0.70$--$1.30$); Infl-dep ="
-        r" inflammation-dependent (significant only in inflamed);"
-        r" NS = not significant in either. The UC\,vs\,CD column shows"
+        r" Hedges'~$g$ from one of the five analyses; significance is indicated"
+        r" by stars ($^{*}q < 0.05$, $^{**}q < 0.01$, $^{***}q < 0.001$)."
+        r" Classification uses the direct inflamed versus uninflamed contrast:"
+        r" Constit = constitutive (altered in uninflamed UC, no further change"
+        r" when inflamed); Amplified = inflammation-amplified (altered in"
+        r" uninflamed UC and further changed when inflamed); Infl-dep ="
+        r" inflammation-dependent (differs between inflamed and uninflamed UC);"
+        r" Undet = undetermined (altered in inflamed UC, but neither of the"
+        r" above is shown); NS = not significant. The UC\,vs\,CD column shows"
         r" the direct comparison (positive = higher in UC).}"
     )
     lines.append(r"\label{tab:cross_comparison}")
