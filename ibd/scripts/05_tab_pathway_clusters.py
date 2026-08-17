@@ -55,6 +55,7 @@ def main():
     p.add_argument("--uninfl-clusters", required=True)
     p.add_argument("--cd-clusters", required=True)
     p.add_argument("--uc-cd-clusters", required=True)
+    p.add_argument("--infl-uninfl-clusters", required=True)
     p.add_argument("--output-dir", required=True)
     args = p.parse_args()
 
@@ -64,9 +65,10 @@ def main():
     un = pd.read_csv(args.uninfl_clusters, encoding="latin1")
     cd = pd.read_csv(args.cd_clusters, encoding="latin1")
     uc_cd = pd.read_csv(args.uc_cd_clusters, encoding="latin1")
+    iu = pd.read_csv(args.infl_uninfl_clusters, encoding="latin1")
 
     # Sort by |Mean_NES| descending within direction (up first, then down)
-    for df in [uc, un, cd, uc_cd]:
+    for df in [uc, un, cd, uc_cd, iu]:
         df["_dir"] = (df["Mean_NES"] > 0).astype(int)
         df["_abs"] = df["Mean_NES"].abs()
         df.sort_values(["_dir", "_abs"], ascending=[False, False], inplace=True)
@@ -104,6 +106,17 @@ def main():
     with open(os.path.join(args.output_dir, "pathway_clusters_cd.tex"), "w") as f:
         f.write(tex_cd)
     print(f"CD: {len(cd)} clusters -> {args.output_dir}/pathway_clusters_cd.tex")
+
+    # Direct inflamed vs uninflamed UC table
+    tex_iu = make_cluster_table(
+        iu,
+        "Pathway clusters in the direct comparison of inflamed with uninflamed UC "
+        "mucosa (positive = higher in inflamed mucosa).",
+        "tab:pathway_clusters_infl_uninfl",
+    )
+    with open(os.path.join(args.output_dir, "pathway_clusters_infl_uninfl.tex"), "w") as f:
+        f.write(tex_iu)
+    print(f"Inf vs uninf: {len(iu)} clusters -> {args.output_dir}/pathway_clusters_infl_uninfl.tex")
 
     # UC vs CD supplementary table
     tex_uc_cd = make_cluster_table(
