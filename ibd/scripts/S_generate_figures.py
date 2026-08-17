@@ -33,15 +33,19 @@ plt.rcParams.update({
     'axes.spines.right': False,
 })
 
-OUTDIR = '/home/claude'
+import sys
+
+# Results directory and output directory may be given on the command line.
+RESULTS = sys.argv[1] if len(sys.argv) > 1 else 'results/paper'
+OUTDIR = sys.argv[2] if len(sys.argv) > 2 else 'figures'
 
 # ── Load data ────────────────────────────────────────────────────────────────
-per_gene = pd.read_csv('/mnt/user-data/uploads/per_dataset_gene_stats_significant.csv')
-meta_gene = pd.read_csv('/mnt/user-data/uploads/gene_meta_significant.csv')
-per_gsea = pd.read_csv('/mnt/user-data/uploads/per_dataset_gsea.csv')
-pw_sig = pd.read_csv('/mnt/user-data/uploads/pathway_meta_significant.csv')
-pw_all_infl = pd.read_csv('/mnt/user-data/uploads/pathway_meta_all_inflamed.csv')
-pw_all_uninfl = pd.read_csv('/mnt/user-data/uploads/pathway_meta_all_uninflamed.csv')
+per_gene = pd.read_csv(f'{RESULTS}/uc_vs_hc/per_dataset_gene_stats.csv')
+meta_gene = pd.read_csv(f'{RESULTS}/uc_vs_hc/gene_meta_significant.csv')
+per_gsea = pd.read_csv(f'{RESULTS}/uc_vs_hc/per_dataset_gsea.csv')
+pw_sig = pd.read_csv(f'{RESULTS}/uc_vs_hc/pathway_meta_significant.csv')
+pw_all_infl = pd.read_csv(f'{RESULTS}/uc_vs_hc/pathway_meta_all.csv')
+pw_all_uninfl = pd.read_csv(f'{RESULTS}/uninf_vs_hc/pathway_meta_all.csv')
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 1. FOREST PLOTS
@@ -369,7 +373,7 @@ print("\n" + "="*70)
 print("CONSTITUTIVE GENE ANALYSIS")
 print("="*70)
 
-comp = pd.read_csv('/mnt/user-data/uploads/comparison_stats.csv')
+comp = pd.read_csv(f'{RESULTS}/comparison_stats.csv')
 
 const_down = comp[(comp.category == 'constitutive') & (comp.sig_uninfl == True) & (comp.direction_uninfl == 'down')]
 const_down = const_down.sort_values('hedges_g_uninfl')

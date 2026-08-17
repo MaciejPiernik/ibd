@@ -220,7 +220,7 @@ def forest_plot_multi(genes, per_df, meta_df, outpath, total_width=12.6):
 
 def generate_figure_s2(data_dir, fig_dir):
     print("Generating Figure S2: Forest plots...")
-    per_gene = load_csv(f"{data_dir}/uc_vs_hc/per_dataset_gene_stats_significant.csv")
+    per_gene = load_csv(f"{data_dir}/uc_vs_hc/per_dataset_gene_stats.csv")
     meta_gene = load_csv(f"{data_dir}/uc_vs_hc/gene_meta_significant.csv")
 
     # Panel A: metabolic/mitochondrial
@@ -257,7 +257,7 @@ def generate_figure_s3(data_dir, fig_dir):
 
     per_gsea = load_csv(f"{data_dir}/uc_vs_hc/per_dataset_gsea.csv")
     pw_all = load_csv(f"{data_dir}/uc_vs_hc/pathway_meta_all.csv")
-    per_gene = load_csv(f"{data_dir}/uc_vs_hc/per_dataset_gene_stats_significant.csv")
+    per_gene = load_csv(f"{data_dir}/uc_vs_hc/per_dataset_gene_stats.csv")
 
     # Get sample sizes per dataset
     ds_n = {}
@@ -1079,7 +1079,7 @@ $\Delta g = g_{\mathrm{infl}} - g_{\mathrm{uninfl}}$.}
 \label{tab:s14}
 """ + amplified_table + r"""
 \end{table}
-
+""" + leave_one_out_section(data_dir) + r"""
 \end{document}
 """
 
@@ -1088,6 +1088,65 @@ $\Delta g = g_{\mathrm{infl}} - g_{\mathrm{uninfl}}$.}
         f.write(doc)
     print(f"  → {tex_path}")
     return tex_path
+
+
+def leave_one_out_section(data_dir):
+    """Table S15, from the leave-one-dataset-out sensitivity analysis."""
+    path = f"{data_dir}/leave_one_out.csv"
+    if not os.path.exists(path):
+        return ""
+
+    folds = pd.read_csv(path)
+    weights = pd.read_csv(f"{data_dir}/cohort_weights.csv", index_col=0)
+    names = {
+        "uc_vs_hc": "UC inflamed vs control",
+        "uninf_vs_hc": "UC uninflamed vs control",
+        "infl_vs_uninfl": "UC inflamed vs uninflamed",
+        "cd_vs_hc": "CD inflamed vs control",
+        "uc_vs_cd": "UC vs CD",
+    }
+
+    rows = []
+    for analysis, group in folds.groupby("analysis", sort=False):
+        w = weights[weights["analysis"] == analysis]
+        rows.append(
+            f"  {names.get(analysis, analysis)} & {len(group)} & "
+            f"{group.significant.min():,}--{group.significant.max():,} & "
+            f"{100 * group.retained.min():.0f}--{100 * group.retained.max():.0f}\\% & "
+            f"{group.correlation.min():.3f} & "
+            f"{100 * w.random_effects.max():.0f}\\% & {100 * w.fixed_effect.max():.0f}\\% \\\\")
+
+    return r"""
+\clearpage
+\subsection*{Table S15: Leave-one-dataset-out sensitivity}
+
+Each meta-analysis was repeated with every contributing cohort omitted in turn.
+Only the pooling step is repeated; per-dataset statistics and enrichment scores
+are unchanged. Significance criteria are reapplied within each fold, with the
+presence threshold set to 50\% of the remaining cohorts.
+
+Retained is the percentage of the genes significant in the full analysis that
+remain significant when a cohort is omitted, taken across all folds. $r$ is the
+smallest correlation between fold and full effect sizes. The last two columns
+give the largest share of the pooled weight carried by any single cohort, under
+the random-effects weights used here and under fixed-effect weights.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Leave-one-dataset-out results for each meta-analysis.}
+\label{tab:s15}
+\begin{tabular}{lrrrrrr}
+\toprule
+ & & Significant & & & \multicolumn{2}{c}{Largest cohort weight} \\
+\cmidrule(l){6-7}
+Analysis & Cohorts & genes & Retained & min $r$ & random & fixed \\
+\midrule
+""" + "\n".join(rows) + r"""
+\bottomrule
+\end{tabular}
+\end{table}
+"""
 
 
 def compile_latex(tex_path, output_dir):

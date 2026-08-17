@@ -28,7 +28,8 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 # ── Paths ──────────────────────────────────────────────────────────
-BASE = Path("results/paper/")
+import sys
+BASE = Path(sys.argv[1] if len(sys.argv) > 1 else "results/paper/")
 DIRECT = BASE / "uc_vs_cd"
 UC_HC = BASE / "uc_vs_hc"
 CD_HC = BASE / "cd_vs_hc"

@@ -80,34 +80,21 @@ def _fmt_g(val: float, q: float) -> str:
     return f"{sign}{val:.2f}{stars}"
 
 
-def _classify(gene: str, uc_row, uninf_row) -> str:
-    """Classify as constitutive, inflammation-dependent, or amplified."""
-    if uc_row is None or uninf_row is None:
+LAYER_LABELS = {
+    "constitutive": "Constit",
+    "inflammation-amplified": "Amplified",
+    "inflammation-dependent": "Infl-dep",
+    "undetermined": "Undet",
+    "not significant": "NS",
+}
+
+
+def _classify(gene: str, layers) -> str:
+    """Layer assigned by S_classify_layers.py, which uses the direct contrast."""
+    if gene not in layers.index:
         return "---"
 
-    uc_q = uc_row["q_value"]
-    un_q = uninf_row["q_value"]
-    uc_g = uc_row["hedges_g"]
-    un_g = uninf_row["hedges_g"]
-
-    uc_sig = uc_q < 0.05
-    un_sig = un_q < 0.05
-
-    if uc_sig and not un_sig:
-        return "Infl-dep"
-    elif uc_sig and un_sig:
-        # Check ratio
-        if abs(uc_g) < 0.1:
-            return "Both sig"
-        ratio = un_g / uc_g
-        if 0.70 <= ratio <= 1.30:
-            return "Constit"
-        else:
-            return "Amplified"
-    elif not uc_sig and un_sig:
-        return "Uninfl-only"
-    else:
-        return "NS"
+    return LAYER_LABELS.get(layers.loc[gene, "layer"], "---")
 
 
 def main():
@@ -116,6 +103,8 @@ def main():
     ap.add_argument("--uninf-dir", default="results/paper/uninf_vs_hc")
     ap.add_argument("--cd-dir", default="results/paper/cd_vs_hc")
     ap.add_argument("--uccd-dir", default="results/paper/uc_vs_cd")
+    ap.add_argument("--direct-dir", default="results/revision_v2/infl_vs_uninfl")
+    ap.add_argument("--layers", default="results/revision_v2/layer_classification.csv")
     ap.add_argument("--output", default="results/paper/cross_comparison_table.tex")
     args = ap.parse_args()
 
@@ -123,13 +112,15 @@ def main():
     uninf = _load_gene_all(args.uninf_dir).set_index("gene")
     cd = _load_gene_all(args.cd_dir).set_index("gene")
     uccd = _load_gene_all(args.uccd_dir).set_index("gene")
+    direct = _load_gene_all(args.direct_dir).set_index("gene")
+    layers = pd.read_csv(args.layers).set_index("gene")
 
     rows = []
     for group_name, genes in GENE_GROUPS.items():
         rows.append({"_group": group_name})
         for gene in genes:
             r = {"gene": gene}
-            for label, df in [("uc", uc), ("uninf", uninf),
+            for label, df in [("uc", uc), ("uninf", uninf), ("direct", direct),
                               ("cd", cd), ("uccd", uccd)]:
                 if gene in df.index:
                     row = df.loc[gene]
@@ -139,9 +130,7 @@ def main():
                     r[f"g_{label}"] = np.nan
                     r[f"q_{label}"] = np.nan
 
-            uc_row = uc.loc[gene] if gene in uc.index else None
-            un_row = uninf.loc[gene] if gene in uninf.index else None
-            r["class"] = _classify(gene, uc_row, un_row)
+            r["class"] = _classify(gene, layers)
             rows.append(r)
 
     # ── build LaTeX ───────────────────────────────────────────────────────
@@ -150,9 +139,10 @@ def main():
     lines.append(r"\centering")
     lines.append(r"\scriptsize")
     lines.append(r"\renewcommand{\arraystretch}{1.10}")
-    lines.append(r"\begin{tabular}{l rrrr l}")
+    lines.append(r"\begin{tabular}{l rrrrr l}")
     lines.append(r"\toprule")
     lines.append(r"Gene & $g_\mathrm{UC\,infl}$ & $g_\mathrm{UC\,uninfl}$"
+                 r" & $g_\mathrm{infl\,vs\,uninfl}$"
                  r" & $g_\mathrm{CD}$ & $g_\mathrm{UC\,vs\,CD}$"
                  r" & Classification \\")
     lines.append(r"\midrule")
@@ -160,17 +150,18 @@ def main():
     for r in rows:
         if "_group" in r:
             lines.append(r"\midrule")
-            lines.append(r"\multicolumn{6}{l}{\textit{"
+            lines.append(r"\multicolumn{7}{l}{\textit{"
                          + r["_group"] + r"}} \\")
             continue
 
         gene_tex = r["gene"].replace("_", r"\_")
         g_uc = _fmt_g(r["g_uc"], r["q_uc"])
         g_un = _fmt_g(r["g_uninf"], r["q_uninf"])
+        g_direct = _fmt_g(r["g_direct"], r["q_direct"])
         g_cd = _fmt_g(r["g_cd"], r["q_cd"])
         g_uccd = _fmt_g(r["g_uccd"], r["q_uccd"])
         cl = r["class"]
-        lines.append(f"  {gene_tex} & {g_uc} & {g_un} & {g_cd}"
+        lines.append(f"  {gene_tex} & {g_uc} & {g_un} & {g_direct} & {g_cd}"
                       f" & {g_uccd} & {cl} \\\\")
 
     lines.append(r"\bottomrule")
