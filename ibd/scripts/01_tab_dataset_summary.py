@@ -1,12 +1,10 @@
 import os
 import csv
+import sys
 
-directories =[
-    "results/paper/uc_vs_hc",
-    "results/paper/uninf_vs_hc",
-    "results/paper/cd_vs_hc",
-    "results/paper/uc_vs_cd"
-]
+# Results directory may be given on the command line; the published run is the default.
+root = sys.argv[1] if len(sys.argv) > 1 else 'results/paper'
+directories = [f'{root}/{name}' for name in ['uc_vs_hc', 'uninf_vs_hc', 'cd_vs_hc', 'uc_vs_cd']]
 
 # Dictionary to store the aggregated counts for each dataset
 dataset_counts = {}
@@ -47,6 +45,14 @@ for directory in directories:
     else:
         print(f"% Warning: File not found: {file_path}")
 
+# Platform per dataset, from the acquisition tables
+platforms = {}
+for table in ['data/DAQ.csv', 'data/DAQ_rnaseq.csv']:
+    if os.path.exists(table):
+        with open(table, encoding='utf-8') as f:
+            for row in csv.DictReader(f, delimiter=';'):
+                platforms[row['Accession number']] = row['Platform']
+
 # Generate the LaTeX table
 print("% Remember to include \\usepackage{booktabs} in your LaTeX preamble")
 print("\\begin{table}[htbp]")
@@ -65,7 +71,7 @@ total_hc = 0
 for dataset, counts in dataset_counts.items():
     # Fetch counts, defaulting to '-' if the dataset doesn't have that specific group
     n_uc = counts.get('uc', '-')
-    n_uninfl = counts.get('uninfl', '-')
+    n_uninfl = counts.get('uninf', '-')
     n_cd = counts.get('cd', '-')
     n_hc = counts.get('hc', '-')
     
@@ -75,8 +81,7 @@ for dataset, counts in dataset_counts.items():
     if n_cd != '-': total_cd += int(n_cd)
     if n_hc != '-': total_hc += int(n_hc)
     
-    # The second column (Platform) is left intentionally blank
-    print(f"{dataset} & & {n_uc} & {n_uninfl} & {n_cd} & {n_hc} \\\\")
+    print(f"{dataset} & {platforms.get(dataset, '')} & {n_uc} & {n_uninfl} & {n_cd} & {n_hc} \\\\")
 
 # Print the Total row
 print("\\midrule")
