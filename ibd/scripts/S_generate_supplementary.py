@@ -1079,7 +1079,7 @@ $\Delta g = g_{\mathrm{infl}} - g_{\mathrm{uninfl}}$.}
 \label{tab:s14}
 """ + amplified_table + r"""
 \end{table}
-""" + leave_one_out_section(data_dir) + r"""
+""" + leave_one_out_section(data_dir) + rnaseq_screening_section(data_dir) + r"""
 \end{document}
 """
 
@@ -1143,6 +1143,53 @@ the random-effects weights used here and under fixed-effect weights.
 Analysis & Cohorts & genes & Retained & min $r$ & random & fixed \\
 \midrule
 """ + "\n".join(rows) + r"""
+\bottomrule
+\end{tabular}
+\end{table}
+"""
+
+
+def rnaseq_screening_section(data_dir):
+    """Table S16: how the RNA-seq validation set was selected."""
+    path = f"{data_dir}/rnaseq_screening.csv"
+    if not os.path.exists(path):
+        return ""
+
+    screening = pd.read_csv(path)
+    included = screening[screening["decision"] == "include"].sort_values("n_samples", ascending=False)
+    excluded = screening[screening["decision"] == "exclude"]
+
+    rows = "\n".join(
+        f"  {r.accession} & {r.n_samples} & {str(r.reason)[:78]} \\\\"
+        for r in included.itertuples())
+
+    reasons = excluded["reason"].value_counts()
+    breakdown = "; ".join(f"{n} {reason.lower()}" for reason, n in reasons.head(8).items())
+
+    return r"""
+\clearpage
+\subsection*{Table S16: Selection of the RNA-seq validation cohorts}
+
+The GEO search of the discovery analysis was repeated restricted to expression
+profiling by high-throughput sequencing, and the same inclusion criteria were
+applied with only the platform restriction lifted, so that the validation set is
+every qualifying dataset rather than a selection from among them.
+
+Of """ + str(len(screening)) + r""" candidate series, """ + str(len(included)) + r""" qualified.
+The remainder were excluded as follows: """ + breakdown + r""".
+
+\begin{table}[H]
+\centering
+\small
+\caption{RNA-seq datasets meeting the inclusion criteria of the discovery
+analysis. Samples is the size of the full series; the counts entering each
+comparison are given in the Methods.}
+\label{tab:s16}
+\begin{tabular}{lrp{8cm}}
+\toprule
+Accession & Samples & Basis for inclusion \\
+\midrule
+""" + rows + r"""
 \bottomrule
 \end{tabular}
 \end{table}
