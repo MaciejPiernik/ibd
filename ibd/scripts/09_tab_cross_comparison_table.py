@@ -22,26 +22,26 @@ import pandas as pd
 
 # ── gene list organised by Discussion section ─────────────────────────────
 GENE_GROUPS = {
-    "Therapeutic targets — anti-TNF / integrin / S1P": [
+    "Therapeutic targets --- anti-TNF / integrin / S1P": [
         "TNF", "TNFRSF1B", "ITGA4", "ITGB7", "MADCAM1",
-        "S1PR1", "S1PR2", "S1PR3", "S1PR4",
+        "S1PR1", "S1PR4",
     ],
-    "Therapeutic targets — IL-23 / JAK-STAT": [
-        "IL23A", "IL12A", "IL12B", "JAK1", "JAK2", "JAK3", "STAT1", "STAT3",
+    "Therapeutic targets --- IL-23 / JAK-STAT": [
+        "IL23A", "IL12A", "IL12B", "JAK1", "JAK2", "JAK3", "STAT1",
     ],
-    "Therapeutic targets — inflammasome / complement / CXCL": [
+    "Therapeutic targets --- inflammasome / complement / CXCL": [
         "CASP1", "IL1B", "CASP4", "CASP5", "GSDMD", "IL18",
         "CFB", "C2", "C3", "C4A", "CD55",
         "CXCL1", "CXCL2", "CXCL3", "CXCL5",
     ],
-    "Metabolic axis — mitochondrial regulators": [
+    "Metabolic axis --- mitochondrial regulators": [
         "PPARGC1A", "PPARGC1B", "ESRRA",
     ],
-    "Metabolic axis — energy metabolism genes": [
+    "Metabolic axis --- energy metabolism genes": [
         "OPA1", "PDP2", "IDH3A", "ACSF2", "SLC22A5",
     ],
     "Ferroptosis / ROS / metallothionein": [
-        "DUOX2", "DUOXA2", "ACSL4", "GPX4", "FTH1", "SLC40A1",
+        "DUOX2", "DUOXA2", "ACSL4", "GPX4", "SLC40A1",
         "MT1E", "MT1F", "MT1G", "MT1M", "MT1X", "MT2A",
     ],
     "Barrier integrity": [
@@ -51,7 +51,7 @@ GENE_GROUPS = {
         "IDO1", "KYNU", "HAAO", "QPRT",
     ],
     "Glucuronidation (selected UGTs)": [
-        "UGT1A1", "UGT1A6", "UGT2A3", "UGT2B7", "UGT2B15", "UGT2B17",
+        "UGT1A1", "UGT1A6", "UGT2A3", "UGT2B17",
     ],
 }
 
