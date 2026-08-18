@@ -1,8 +1,8 @@
 import pandas as pd
 from scipy.stats import spearmanr
 
-meta = pd.read_csv('results/paper/uc_vs_hc/gene_meta_significant.csv', encoding='latin1')
-rra = pd.read_csv('results/paper/uc_vs_hc/gene_rra.csv', encoding='latin1')
+meta = pd.read_csv('results/revision_v2/uc_vs_hc/gene_meta_significant.csv', encoding='latin1')
+rra = pd.read_csv('results/revision_v2/uc_vs_hc/gene_rra.csv', encoding='latin1')
 
 merged = meta.merge(rra, on='gene', how='inner')
 merged = merged[merged['datasets_x'] >=7]

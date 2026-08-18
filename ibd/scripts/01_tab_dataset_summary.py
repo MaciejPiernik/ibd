@@ -2,8 +2,8 @@ import os
 import csv
 import sys
 
-# Results directory may be given on the command line; the published run is the default.
-root = sys.argv[1] if len(sys.argv) > 1 else 'results/paper'
+# Results directory may be given on the command line; the revision run is the default.
+root = sys.argv[1] if len(sys.argv) > 1 else 'results/revision_v2'
 directories = [f'{root}/{name}' for name in ['uc_vs_hc', 'uninf_vs_hc', 'cd_vs_hc', 'uc_vs_cd']]
 
 # Dictionary to store the aggregated counts for each dataset

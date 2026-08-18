@@ -3,7 +3,7 @@ Cross-comparison gene table for the Discussion section.
 
 Merges gene-level meta-analysis results across four analyses and produces a
 LaTeX table showing key genes grouped by functional category, with effect
-sizes, significance, and constitutive/inflammation-dependent classification.
+sizes, significance, and the activity-layer classification from S_gene_layers.py.
 
 Usage:
     python ibd/scripts/09_cross_comparison_table.py \
@@ -90,7 +90,7 @@ LAYER_LABELS = {
 
 
 def _classify(gene: str, layers) -> str:
-    """Layer assigned by S_classify_layers.py, which uses the direct contrast."""
+    """Layer assigned by S_gene_layers.py, from the three-contrast triage."""
     if gene not in layers.index:
         return "---"
 
@@ -99,13 +99,13 @@ def _classify(gene: str, layers) -> str:
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--uc-dir", default="results/paper/uc_vs_hc")
-    ap.add_argument("--uninf-dir", default="results/paper/uninf_vs_hc")
-    ap.add_argument("--cd-dir", default="results/paper/cd_vs_hc")
-    ap.add_argument("--uccd-dir", default="results/paper/uc_vs_cd")
+    ap.add_argument("--uc-dir", default="results/revision_v2/uc_vs_hc")
+    ap.add_argument("--uninf-dir", default="results/revision_v2/uninf_vs_hc")
+    ap.add_argument("--cd-dir", default="results/revision_v2/cd_vs_hc")
+    ap.add_argument("--uccd-dir", default="results/revision_v2/uc_vs_cd")
     ap.add_argument("--direct-dir", default="results/revision_v2/infl_vs_uninfl")
-    ap.add_argument("--layers", default="results/revision_v2/layer_classification.csv")
-    ap.add_argument("--output", default="results/paper/cross_comparison_table.tex")
+    ap.add_argument("--layers", default="results/revision_v2/gene_layers.csv")
+    ap.add_argument("--output", default="results/revision_v2/cross_comparison_table.tex")
     args = ap.parse_args()
 
     uc = _load_gene_all(args.uc_dir).set_index("gene")
@@ -171,13 +171,16 @@ def main():
         r" discussed in the text. Each column shows the meta-analytic"
         r" Hedges'~$g$ from one of the five analyses; significance is indicated"
         r" by stars ($^{*}q < 0.05$, $^{**}q < 0.01$, $^{***}q < 0.001$)."
-        r" Classification uses the direct inflamed versus uninflamed contrast:"
-        r" Constit = constitutive (altered in uninflamed UC, no further change"
-        r" when inflamed); Amplified = inflammation-amplified (altered in"
-        r" uninflamed UC and further changed when inflamed); Infl-dep ="
-        r" inflammation-dependent (differs between inflamed and uninflamed UC);"
-        r" Undet = undetermined (altered in inflamed UC, but neither of the"
-        r" above is shown); NS = not significant. The UC\,vs\,CD column shows"
+        r" Classification triages the three UC contrasts:"
+        r" Constit = constitutive (altered in both inflamed and uninflamed UC,"
+        r" with no further change when inflamed); Amplified ="
+        r" inflammation-amplified (altered in uninflamed UC and further changed"
+        r" when inflamed); Infl-dep = inflammation-dependent (altered in"
+        r" inflamed UC and differing from uninflamed UC, with no change in"
+        r" uninflamed UC); Undet = undetermined (significant in at least one"
+        r" contrast, but in a combination that places it in none of the"
+        r" layers); NS = not significant in any contrast."
+        r" The UC\,vs\,CD column shows"
         r" the direct comparison (positive = higher in UC).}"
     )
     lines.append(r"\label{tab:cross_comparison}")

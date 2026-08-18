@@ -6,7 +6,7 @@ Labels highlight high-confidence constitutive genes (ratio ~1, large effect).
 
 Usage:
     python ibd/scripts/06_fig_scatter_comparison.py \
-        --input results/paper/comparison_stats.csv \
+        --input results/revision_v2/comparison_stats.csv \
         --output figures/scatter_comparison.pdf
 """
 

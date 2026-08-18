@@ -5,9 +5,10 @@ import pandas as pd
 from kneefinder import KneeFinder
 
 
-# Directories may be given on the command line; otherwise the published run is used.
-DIRS = sys.argv[1:] or ['results/paper/uc_vs_cd/', 'results/paper/uc_vs_hc/',
-                        'results/paper/uninf_vs_hc/', 'results/paper/cd_vs_hc/']
+# Directories may be given on the command line; otherwise the revision run is used.
+DIRS = sys.argv[1:] or ['results/revision_v2/uc_vs_cd/', 'results/revision_v2/uc_vs_hc/',
+                        'results/revision_v2/uninf_vs_hc/', 'results/revision_v2/cd_vs_hc/',
+                        'results/revision_v2/infl_vs_uninfl/']
 
 for dir in DIRS:
     df = pd.read_csv(f'{dir}pathway_meta_all.csv')

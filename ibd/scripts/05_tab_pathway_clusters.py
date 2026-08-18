@@ -3,10 +3,10 @@
 
 Usage:
     python ibd/scripts/05_tab_pathway_clusters.py \
-        --uc-clusters results/paper/uc_vs_hc/hierarchical_pathway_clusters.csv \
-        --uninfl-clusters results/paper/uninf_vs_hc/hierarchical_pathway_clusters.csv \
-        --cd-clusters results/paper/cd_vs_hc/hierarchical_pathway_clusters.csv \
-        --uc-cd-clusters results/paper/uc_vs_cd/hierarchical_pathway_clusters.csv \
+        --uc-clusters results/revision_v2/uc_vs_hc/hierarchical_pathway_clusters.csv \
+        --uninfl-clusters results/revision_v2/uninf_vs_hc/hierarchical_pathway_clusters.csv \
+        --cd-clusters results/revision_v2/cd_vs_hc/hierarchical_pathway_clusters.csv \
+        --uc-cd-clusters results/revision_v2/uc_vs_cd/hierarchical_pathway_clusters.csv \
         --output-dir tables/
 """
 import argparse, os

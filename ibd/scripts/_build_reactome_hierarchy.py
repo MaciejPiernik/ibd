@@ -6,8 +6,8 @@ and outputs a JSON suitable for the collapsible tree viewer.
 
 Usage:
     python ibd/scripts/build_reactome_hierarchy.py \
-        --pathways results/paper/uc_vs_hc/pathway_meta_significant.csv \
-        --output results/paper/uc_vs_hc/reactome_tree.json
+        --pathways results/revision_v2/uc_vs_hc/pathway_meta_significant.csv \
+        --output results/revision_v2/uc_vs_hc/reactome_tree.json
 
 Dependencies: pandas, requests (or urllib)
 """

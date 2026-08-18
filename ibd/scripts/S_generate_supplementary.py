@@ -51,7 +51,7 @@ plt.rcParams.update({
 
 def parse_args():
     p = argparse.ArgumentParser()
-    p.add_argument("--data-dir", default="results/paper/",
+    p.add_argument("--data-dir", default="results/revision_v2/",
                    help="Root directory containing uc_vs_hc/, uninf_vs_hc/, cd_vs_hc/, uc_vs_cd/")
     p.add_argument("--output-dir", default="output")
     return p.parse_args()

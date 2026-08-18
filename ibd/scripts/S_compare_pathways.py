@@ -13,9 +13,9 @@ import pandas as pd
 import sys
 
 # --- Config ---
-FILE_INFLAMED = "results/paper/uc_vs_hc/pathway_meta_significant.csv"
-FILE_UNINFLAMED = "results/paper/uninf_vs_hc/pathway_meta_significant.csv"
-OUTPUT = "results/paper/pathway_comparison.csv"
+FILE_INFLAMED = "results/revision_v2/uc_vs_hc/pathway_meta_significant.csv"
+FILE_UNINFLAMED = "results/revision_v2/uninf_vs_hc/pathway_meta_significant.csv"
+OUTPUT = "results/revision_v2/pathway_comparison.csv"
 
 KEEP_COLS = [
     "term", "combined_nes", "direction", "q_value",

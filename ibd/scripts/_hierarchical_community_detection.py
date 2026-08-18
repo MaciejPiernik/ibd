@@ -7,7 +7,7 @@ import networkx as nx
 MAX_DEPTH = 1  # Maximum depth of the hierarchy
 MIN_SIZE = 6   # Minimum cluster size to consider for further splitting
 THRESHOLD = 0.33  # Minimum overlap coefficient to consider an edge
-DIR = (sys.argv[1] if len(sys.argv) > 1 else 'results/paper/uc_vs_cd/')  # Output directory
+DIR = (sys.argv[1] if len(sys.argv) > 1 else 'results/revision_v2/uc_vs_cd/')  # Output directory
 
 # 1. Load Data
 df = pd.read_csv(f'{DIR}pathway_meta_significant_knee.csv')

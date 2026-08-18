@@ -12,12 +12,12 @@ Cells are visually coded in three tiers:
 
 Usage:
     python ibd/scripts/07_fig_pathway_heatmap.py \
-        --uc-clusters results/paper/uc_vs_hc/hierarchical_pathway_clusters.csv \
-        --uninfl-clusters results/paper/uninf_vs_hc/hierarchical_pathway_clusters.csv \
-        --cd-clusters results/paper/cd_vs_hc/hierarchical_pathway_clusters.csv \
-        --uc-pw-all results/paper/uc_vs_hc/pathway_meta_all.csv \
-        --uninfl-pw-all results/paper/uninf_vs_hc/pathway_meta_all.csv \
-        --cd-pw-all results/paper/cd_vs_hc/pathway_meta_all.csv \
+        --uc-clusters results/revision_v2/uc_vs_hc/hierarchical_pathway_clusters.csv \
+        --uninfl-clusters results/revision_v2/uninf_vs_hc/hierarchical_pathway_clusters.csv \
+        --cd-clusters results/revision_v2/cd_vs_hc/hierarchical_pathway_clusters.csv \
+        --uc-pw-all results/revision_v2/uc_vs_hc/pathway_meta_all.csv \
+        --uninfl-pw-all results/revision_v2/uninf_vs_hc/pathway_meta_all.csv \
+        --cd-pw-all results/revision_v2/cd_vs_hc/pathway_meta_all.csv \
         --output-pdf figures/pathway_heatmap.pdf \
         --sig-threshold 0.05
 """

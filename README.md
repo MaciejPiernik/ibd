@@ -1,19 +1,22 @@
 # Ulcerative Colitis Meta-Analysis
 
-Code for the paper: **"Large-scale transcriptomic meta-analysis identifies novel therapeutic targets for ulcerative colitis"**
+Code for the paper: **"Large-scale transcriptomic meta-analysis identifies constitutive and inflammation-dependent layers in ulcerative colitis"**
 
 This repository implements the complete analytical pipeline: from downloading and processing GEO microarray datasets, through differential expression and pathway enrichment, to random-effects meta-analysis, pathway clustering, cross-comparison synthesis, and generation of all paper figures and tables.
 
 ## Overview
 
-The analysis covers **14 GEO datasets** (1,470 samples, 9 microarray platforms) and runs **four parallel meta-analyses**:
+The discovery analysis covers **17 GEO microarray datasets** (1,677 samples, 10 array
+platforms) and runs **five parallel meta-analyses**. An independent **9-dataset RNA-seq
+corpus** (1,250 samples) validates them through the same pipeline (see Step 6).
 
 | Comparison | Datasets | Description |
 |---|---|---|
-| UC inflamed vs healthy controls | 12 | Primary analysis |
-| UC uninflamed vs healthy controls | 5 | Constitutive dysregulation |
-| CD inflamed vs healthy controls | 8 | Cross-disease comparison |
-| UC vs CD (direct) | 6 | Disease-specificity analysis |
+| UC inflamed vs healthy controls | 15 | Primary analysis |
+| UC uninflamed vs healthy controls | 6 | Constitutive dysregulation |
+| UC inflamed vs UC uninflamed | 6 | Direct inflammation contrast |
+| CD inflamed vs healthy controls | 9 | Cross-disease comparison |
+| UC vs CD (direct) | 7 | Disease-specificity analysis |
 
 Each comparison goes through the same pipeline: per-dataset limma differential expression, Hedges' g effect sizes, GSEA (Reactome 2022), REML random-effects meta-analysis at both gene and pathway levels, knee-point filtering, and Louvain community detection on pathway overlap networks.
 
@@ -81,13 +84,13 @@ keyed by gene symbol.
 
 | Output directory | `--source` | GROUP_1 / INFLAMMATION_1 | GROUP_2 / INFLAMMATION_2 | Cohorts | `min_datasets` |
 |---|---|---|---|---|---|
-| `results/paper/uc_vs_hc` | microarray | UC / Inflamed | Ctrl / Uninflamed | 12 | 6 |
-| `results/paper/uninf_vs_hc` | microarray | UC / Uninflamed | Ctrl / Uninflamed | 5 | 3 |
-| `results/paper/cd_vs_hc` | microarray | CD / Inflamed | Ctrl / Uninflamed | 8 | 4 |
-| `results/paper/uc_vs_cd` | microarray | UC / Inflamed | CD / Inflamed | 6 | 3 |
+| `results/revision_v2/uc_vs_hc` | microarray | UC / Inflamed | Ctrl / Uninflamed | 15 | 8 |
+| `results/revision_v2/uninf_vs_hc` | microarray | UC / Uninflamed | Ctrl / Uninflamed | 6 | 3 |
+| `results/revision_v2/cd_vs_hc` | microarray | CD / Inflamed | Ctrl / Uninflamed | 9 | 5 |
+| `results/revision_v2/uc_vs_cd` | microarray | UC / Inflamed | CD / Inflamed | 7 | 4 |
+| `results/revision_v2/infl_vs_uninfl` | microarray | UC / Inflamed | UC / Uninflamed | 6 | 3 |
 | `results/revision_v2/rnaseq_uc_vs_hc` | rnaseq | UC / Inflamed | Ctrl / Uninflamed | 8 | 4 |
 | `results/revision_v2/rnaseq_uninf_vs_hc` | rnaseq | UC / Uninflamed | Ctrl / Uninflamed | 3 | 2 |
-| `results/revision_v2/infl_vs_uninfl` | microarray | UC / Inflamed | UC / Uninflamed | 6 | 3 |
 | `results/revision_v2/rnaseq_infl_vs_uninfl` | rnaseq | UC / Inflamed | UC / Uninflamed | 2 | 1 |
 
 When both arms come from the same disease group, as in the last two rows, the
@@ -96,7 +99,7 @@ told apart.
 
 ```bash
 python -m ibd run-experiment \
-    --output-dir results/paper/uc_vs_hc
+    --output-dir results/revision_v2/uc_vs_hc
 
 python -m ibd run-experiment --source rnaseq \
     --output-dir results/revision_v2/rnaseq_uc_vs_hc
@@ -134,7 +137,8 @@ python ibd/scripts/_cut_pathways_at_knee.py
 python ibd/scripts/_hierarchical_community_detection.py
 ```
 
-These scripts process results from all four comparisons (in `results/paper/{uc_vs_hc,uninf_vs_hc,cd_vs_hc,uc_vs_cd}/`) and produce:
+These scripts process results from all five microarray comparisons (in
+`results/revision_v2/{uc_vs_hc,uninf_vs_hc,cd_vs_hc,uc_vs_cd,infl_vs_uninfl}/`) and produce:
 - `pathway_meta_significant_knee.csv` -- pathways passing the knee-point filter
 - `hierarchical_pathway_clusters.csv` -- pathway community assignments
 - `pathway_meta_significant_knee_with_clusters.csv` -- merged result
@@ -144,15 +148,15 @@ These scripts process results from all four comparisons (in `results/paper/{uc_v
 ```bash
 # Inflamed vs uninflamed effect size comparison (Wald test, constitutive/inflammation-dependent classification)
 python ibd/scripts/S_effect_size_comparison.py \
-    --inflamed results/paper/uc_vs_hc/gene_meta_all.csv \
-    --uninflamed results/paper/uninf_vs_hc/gene_meta_all.csv \
-    --output-dir results/paper/
+    --inflamed results/revision_v2/uc_vs_hc/gene_meta_all.csv \
+    --uninflamed results/revision_v2/uninf_vs_hc/gene_meta_all.csv \
+    --output-dir results/revision_v2/
 
 # Compare significant pathways between inflamed and uninflamed analyses
 python ibd/scripts/S_compare_pathways.py
 
-# Classify genes into layers using the direct inflamed-vs-uninflamed contrast
-python ibd/scripts/S_classify_layers.py
+# Classify genes into activity layers by triage between the three UC contrasts
+python ibd/scripts/S_gene_layers.py
 ```
 
 ### Step 5: Generate figures and tables
@@ -163,7 +167,7 @@ Scripts are numbered in order. Prefixes indicate output type: `fig` = figure, `t
 # Figures
 python ibd/scripts/00_fig_generate_methods_figure.py          # Methods flowchart (SVG)
 python ibd/scripts/03_fig_volcano_plot.py                      # Volcano plot
-python ibd/scripts/06_fig_scatter_comparison.py --input results/paper/comparison_stats.csv  # Constitutive gene scatter
+python ibd/scripts/06_fig_scatter_comparison.py --input results/revision_v2/comparison_stats.csv  # Constitutive gene scatter
 python ibd/scripts/07_fig_pathway_heatmap.py                   # Three-way pathway heatmap
 python ibd/scripts/08_fig_uc_cd_concordance.py                 # UC-CD concordance + pathway clusters
 
@@ -176,7 +180,7 @@ python ibd/scripts/09_tab_cross_comparison_table.py            # Cross-compariso
 
 # Supplementary
 python ibd/scripts/S_generate_figures.py                       # Forest plots, I² diagnostics, Stouffer's check
-python ibd/scripts/S_generate_supplementary.py --data-dir results/paper/  # Full supplementary PDF + CSV tables
+python ibd/scripts/S_generate_supplementary.py --data-dir results/revision_v2/  # Full supplementary PDF + CSV tables
 ```
 
 ### Step 6: RNA-seq validation
@@ -257,14 +261,16 @@ data/
 db/                                 # Processed microarray expression + metadata
 db_rnaseq/                          # Processed RNA-seq expression + metadata
 
-results/paper/                      # Discovery outputs
+results/revision_v2/                # Every result reported in the paper
 ├── uc_vs_hc/                       # UC inflamed vs healthy controls
 ├── uninf_vs_hc/                    # UC uninflamed vs healthy controls
 ├── cd_vs_hc/                       # CD inflamed vs healthy controls
-└── uc_vs_cd/                       # UC vs CD direct comparison
-
-results/revision_v2/                # Validation outputs
+├── uc_vs_cd/                       # UC vs CD direct comparison
+├── infl_vs_uninfl/                 # UC inflamed vs UC uninflamed
 ├── rnaseq_uc_vs_hc/                # UC inflamed vs healthy controls, RNA-seq
 ├── rnaseq_uninf_vs_hc/             # UC uninflamed vs healthy controls, RNA-seq
-└── comparison/                     # Cross-platform concordance
+├── rnaseq_infl_vs_uninfl/          # UC inflamed vs uninflamed, RNA-seq
+└── comparison/                      # Cross-platform concordance
+
+results/paper/                      # Superseded first-submission run, kept for reference
 ```

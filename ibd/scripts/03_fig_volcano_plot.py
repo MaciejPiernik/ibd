@@ -64,7 +64,7 @@ def get_protein_coding_genes(path: str | None = None) -> set[str]:
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--data-dir", default="results/paper/uc_vs_hc",
+    ap.add_argument("--data-dir", default="results/revision_v2/uc_vs_hc",
                      help="Directory containing gene_meta_all.csv")
     ap.add_argument("--output", default="figures/volcano.pdf")
     args = ap.parse_args()

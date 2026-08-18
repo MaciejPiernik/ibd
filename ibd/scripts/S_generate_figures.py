@@ -36,7 +36,7 @@ plt.rcParams.update({
 import sys
 
 # Results directory and output directory may be given on the command line.
-RESULTS = sys.argv[1] if len(sys.argv) > 1 else 'results/paper'
+RESULTS = sys.argv[1] if len(sys.argv) > 1 else 'results/revision_v2'
 OUTDIR = sys.argv[2] if len(sys.argv) > 2 else 'figures'
 
 # ── Load data ────────────────────────────────────────────────────────────────
@@ -323,12 +323,15 @@ print(f"  Direction concordance among jointly significant: {same_dir:.1%}")
 r_z, p_z = stats.pearsonr(merged.combined_nes, merged.z_stouffer)
 print(f"  Pearson r (NES vs Stouffer z): {r_z:.3f} (p={p_z:.2e})")
 
-# Focus on the knee-filtered pathways from the paper
+# Focus on the pathways passing the paper's full significance criteria
+# (q < 0.05 plus direction consistency and presence), a stricter set than
+# reml_sig above, which applies the q threshold alone.
 pw_sig_terms = set(pw_sig.term.values)
-merged['in_knee'] = merged.term.isin(pw_sig_terms)
-knee_merged = merged[merged.in_knee]
-knee_concordance = knee_merged.sig_stouffer.mean()
-print(f"\n  Of {len(knee_merged)} knee-filtered pathways, {knee_merged.sig_stouffer.sum()} ({knee_concordance:.1%}) also Stouffer-significant")
+merged['in_sig'] = merged.term.isin(pw_sig_terms)
+sig_merged = merged[merged.in_sig]
+sig_concordance = sig_merged.sig_stouffer.mean()
+print(f"\n  Of {len(sig_merged)} pathways meeting the full criteria, "
+      f"{sig_merged.sig_stouffer.sum()} ({sig_concordance:.1%}) also Stouffer-significant")
 
 # Plot: NES vs Stouffer z
 fig, ax = plt.subplots(figsize=(5.5, 5))

@@ -14,9 +14,9 @@ Outputs:
 
 Usage:
     python ibd/scripts/0X_effect_size_comparison.py \
-        --inflamed   results/paper/uc_vs_hc/gene_meta_all.csv \
-        --uninflamed results/paper/uninf_vs_hc/gene_meta_all.csv \
-        --output-dir results/paper/
+        --inflamed   results/revision_v2/uc_vs_hc/gene_meta_all.csv \
+        --uninflamed results/revision_v2/uninf_vs_hc/gene_meta_all.csv \
+        --output-dir results/revision_v2/
 """
 
 import argparse

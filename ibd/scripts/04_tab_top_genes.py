@@ -8,10 +8,10 @@ Outputs:
 
 Usage:
     python ibd/scripts/04_top_genes.py \
-        --meta results/paper/uc_vs_hc/gene_meta_all.csv \
-        --rra results/paper/uc_vs_hc/gene_rra.csv \
-        --pathways results/paper/uc_vs_hc/pathway_meta_significant.csv \
-        --output-dir results/paper
+        --meta results/revision_v2/uc_vs_hc/gene_meta_all.csv \
+        --rra results/revision_v2/uc_vs_hc/gene_rra.csv \
+        --pathways results/revision_v2/uc_vs_hc/pathway_meta_significant.csv \
+        --output-dir results/revision_v2
 """
 
 import argparse
@@ -112,10 +112,10 @@ def make_top_genes_table(df: pd.DataFrame, direction: str, n: int = 20) -> str:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--meta', default='results/paper/uc_vs_hc/gene_meta_all.csv', help='Gene-level meta-analysis results')
-    parser.add_argument('--rra', default='results/paper/uc_vs_hc/gene_rra.csv', help='RRA results')
-    parser.add_argument('--pathways', default='results/paper/uc_vs_hc/pathway_meta_significant.csv', help='Pathway results')
-    parser.add_argument('--output-dir', default='results/paper/uc_vs_hc', help='Directory to save LaTeX tables')
+    parser.add_argument('--meta', default='results/revision_v2/uc_vs_hc/gene_meta_all.csv', help='Gene-level meta-analysis results')
+    parser.add_argument('--rra', default='results/revision_v2/uc_vs_hc/gene_rra.csv', help='RRA results')
+    parser.add_argument('--pathways', default='results/revision_v2/uc_vs_hc/pathway_meta_significant.csv', help='Pathway results')
+    parser.add_argument('--output-dir', default='results/revision_v2', help='Directory to save LaTeX tables')
     parser.add_argument('--top-n', type=int, default=20)
     parser.add_argument('--encoding', default='latin1')
     parser.add_argument('--hgnc', default=None,

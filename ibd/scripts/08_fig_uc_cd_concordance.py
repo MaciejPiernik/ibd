@@ -29,7 +29,7 @@ from pathlib import Path
 
 # ── Paths ──────────────────────────────────────────────────────────
 import sys
-BASE = Path(sys.argv[1] if len(sys.argv) > 1 else "results/paper/")
+BASE = Path(sys.argv[1] if len(sys.argv) > 1 else "results/revision_v2/")
 DIRECT = BASE / "uc_vs_cd"
 UC_HC = BASE / "uc_vs_hc"
 CD_HC = BASE / "cd_vs_hc"

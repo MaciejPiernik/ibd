@@ -118,7 +118,7 @@ def make_svg():
     aw = 420
     box(CX - aw/2, y, aw, BOX_H2, C_DATA,
         "GEO database search",
-        "33 candidate datasets → 14 retained (1,470 samples, 9 platforms)")
+        "33 candidate datasets → 17 retained (1,095 samples, 10 platforms)")
     y += BOX_H2
     arrv(CX, y + ARROW_GAP, y + GAP_V - ARROW_GAP)
     y += GAP_V
@@ -133,7 +133,7 @@ def make_svg():
         "Multi-probe collapse by mean expression")
     box(pxr, y, pw, BOX_H2, C_PROC,
         "Metadata harmonization",
-        "14 dataset-specific parsers")
+        "17 dataset-specific parsers")
     y += BOX_H2
     ml = pxl + pw/2
     mr = pxr + pw/2
@@ -144,21 +144,22 @@ def make_svg():
     arrv(CX, my, my + 18)
     y = my + 20
 
-    # ── Four comparisons ──
-    txt(CX, y + 8, "Sample selection: 4 parallel comparisons",
+    # ── Five comparisons ──
+    txt(CX, y + 8, "Sample selection: 5 parallel comparisons",
         size=FS_HEAD, weight="700")
     y += 26
 
     cw = 185
     cg = 10
-    cx0 = CX - (4 * cw + 3 * cg) / 2
     ch = 60
     comps = [
-        ("UC inflamed vs ctrl",   "12 datasets; 460 UC, 236 ctrl"),
-        ("UC uninflamed vs ctrl", "5 datasets; 132 UC, 113 ctrl"),
-        ("CD inflamed vs ctrl",   "8 datasets; 123 CD, 134 ctrl"),
-        ("UC vs CD direct",       "6 datasets; 197 UC, 108 CD"),
+        ("UC inflamed vs ctrl",   "15 datasets; 510 UC, 270 ctrl"),
+        ("UC uninflamed vs ctrl", "6 datasets; 139 UC, 126 ctrl"),
+        ("UC infl vs uninfl",     "6 datasets; 203 vs 139 UC"),
+        ("CD inflamed vs ctrl",   "9 datasets; 155 CD, 145 ctrl"),
+        ("UC vs CD direct",       "7 datasets; 207 UC, 140 CD"),
     ]
+    cx0 = CX - (len(comps) * cw + (len(comps) - 1) * cg) / 2
     centers = []
     for i, (lb, sub) in enumerate(comps):
         bx = cx0 + i * (cw + cg)
@@ -243,7 +244,7 @@ def make_svg():
     vbox(rx, ry, rw, rh,
          ["Robust Rank Aggregation",
           "Ranking by |t| from limma",
-          "(ρ = 0.89 with |g| rankings)"])
+          "(ρ = 0.91 with |g| rankings)"])
     vconn(rx + rw, ry + rh/2, gx - 2, ry + rh/2)
 
     # Row 2: Heterogeneity / Pathway-level REML
@@ -252,7 +253,7 @@ def make_svg():
 
     box(gx, r2, BW, BOX_H2, C_ANAL,
         "Heterogeneity assessment",
-        "I² quantification; |g|–I² correlation (ρ = 0.74)")
+        "I² quantification; |g|–I² correlation (ρ = 0.73)")
     box(px, r2, BW, BOX_H2, C_ANAL,
         "Pathway-level REML meta-analysis",
         "NES variance ≈ (NES/z)²")
@@ -263,7 +264,7 @@ def make_svg():
     sy = r2 + 8
     vbox(sx, sy, sw_, sh,
          ["Stouffer's weighted z-method",
-          "(91.3% concordance, r = 0.89)"])
+          "(92.5% concordance, r = 0.38)"])
     vconn(sx, sy + sh/2, px + BW + 2, sy + sh/2)
 
     # Row 3: pathway — LE aggregation; gene track continues
@@ -316,7 +317,7 @@ def make_svg():
     out_w = px + BW - gx + 20
     box(out_x, out_y, out_w, BOX_H2, C_OUT,
         "Cross-comparison synthesis",
-        "Constitutive vs inflammatory (Wald test on Δg, ratio filter 0.70–1.30); UC vs CD pathway map")
+        "Constitutive/Inflammatory classification; UC vs CD pathway map")
 
     # UC–CD concordance validation (right side, vertically centered with synthesis box)
     vh = 56
