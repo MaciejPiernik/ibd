@@ -381,94 +381,37 @@ def generate_figure_s3(data_dir, fig_dir):
 #  CONSTITUTIVE ANALYSIS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def compute_constitutive_analysis(data_dir):
-    """Compute constitutive vs inflammation-dependent gene classification."""
-    print("Computing constitutive gene analysis...")
-
-    infl = load_csv(f"{data_dir}/uc_vs_hc/gene_meta_all.csv")
-    uninfl = load_csv(f"{data_dir}/uninf_vs_hc/gene_meta_all.csv")
-    infl_sig = load_csv(f"{data_dir}/uc_vs_hc/gene_meta_significant.csv")
-    uninfl_sig = load_csv(f"{data_dir}/uninf_vs_hc/gene_meta_significant.csv")
-
-    # Merge ALL shared genes
-    from statsmodels.stats.multitest import multipletests
-    m = infl[["gene", "hedges_g", "se", "q_value", "direction"]].merge(
-        uninfl[["gene", "hedges_g", "se", "q_value", "direction"]],
-        on="gene", suffixes=("_infl", "_uninfl"), how="inner"
-    )
-
-    # Wald test on ALL shared genes (BH correction across full set)
-    m["delta_g"] = m.hedges_g_infl - m.hedges_g_uninfl
-    m["delta_se"] = np.sqrt(m.se_infl**2 + m.se_uninfl**2)
-    m["delta_z"] = m.delta_g / m.delta_se
-    m["delta_p"] = 2 * (1 - stats.norm.cdf(np.abs(m.delta_z)))
-    _, m["delta_q"], _, _ = multipletests(m.delta_p, method="fdr_bh")
-
-    # Now filter to genes significant in both analyses, same direction
-    sig_infl_genes = set(infl_sig.gene)
-    sig_uninfl_genes = set(uninfl_sig.gene)
-    both_sig = sig_infl_genes & sig_uninfl_genes
-    same_dir = m[m.gene.isin(both_sig)].copy()
-    same_dir = same_dir[same_dir.direction_infl == same_dir.direction_uninfl]
-
-    # Classify (delta_q already from genome-wide BH correction)
-    same_dir["ratio"] = same_dir.hedges_g_uninfl / same_dir.hedges_g_infl
-
-    constitutive = same_dir[
-        (same_dir.delta_q >= 0.05) &
-        (same_dir.ratio >= 0.70) & (same_dir.ratio <= 1.30)
-    ].copy()
-
-    amplified = same_dir[same_dir.delta_q < 0.05].copy()
-
-    print(f"  Genes significant in both: {len(same_dir)}")
-    print(f"  Constitutive (ratio 0.7-1.3): {len(constitutive)}")
-    print(f"  Inflammation-amplified: {len(amplified)}")
-
-    return constitutive, amplified, same_dir
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  SCATTER PLOT (used as main figure, generated here for completeness)
-# ═══════════════════════════════════════════════════════════════════════════════
-
-def generate_scatter_comparison(same_dir, fig_dir):
-    """Generate the constitutive scatter comparison plot."""
+def generate_scatter_comparison(layers, fig_dir):
+    """Scatter of the two activity layers present in uninflamed mucosa."""
     print("Generating scatter comparison plot...")
 
-    const = same_dir[same_dir.delta_q >= 0.05].copy()
-    const["ratio"] = const.hedges_g_uninfl / const.hedges_g_infl
-    ratio_dev = (const["ratio"] - 1).abs()
+    styles = [("constitutive", "#2166ac", "Constitutive"),
+              ("inflammation-amplified", "#d6604d", "Inflammation-amplified")]
+    shown = layers[layers.layer.isin([name for name, _, _ in styles])]
 
     fig, ax = plt.subplots(figsize=(7, 7))
-    sc = ax.scatter(
-        const.hedges_g_infl, const.hedges_g_uninfl,
-        c=ratio_dev, cmap="RdYlBu_r", s=55, alpha=0.85, zorder=3,
-        edgecolors="k", linewidths=0.4, vmin=0, vmax=0.8,
-    )
+    for name, colour, label in styles:
+        sub = shown[shown.layer == name]
+        ax.scatter(sub.hedges_g_infl, sub.hedges_g_uninf,
+                   s=55, alpha=0.85, c=colour, edgecolors="k", linewidths=0.4,
+                   zorder=3, label=f"{label} ($n = {len(sub)}$)")
 
-    # Labels for near-diagonal genes
-    to_label = const[const["ratio"].between(0.7, 1.3)]
     try:
         from adjustText import adjust_text
-        texts = []
-        for _, r in to_label.iterrows():
-            texts.append(ax.text(
-                r.hedges_g_infl, r.hedges_g_uninfl, r.gene,
-                fontsize=8, color="k", fontweight="medium", zorder=5,
-            ))
+        texts = [ax.text(r.hedges_g_infl, r.hedges_g_uninf, r.gene,
+                         fontsize=8, color="k", fontweight="medium", zorder=5)
+                 for r in shown[shown.layer == "constitutive"].itertuples()]
         adjust_text(
             texts, ax=ax,
-            x=const.hedges_g_infl.values,
-            y=const.hedges_g_uninfl.values,
+            x=shown.hedges_g_infl.values, y=shown.hedges_g_uninf.values,
             arrowprops=dict(arrowstyle="-", color="grey", lw=0.5, alpha=0.8),
-            expand=(5, 5), force_text=(1, 1),
+            expand=(1.3, 1.5), force_text=(0.4, 0.6),
         )
     except ImportError:
         pass
 
-    lim = max(const.hedges_g_infl.abs().max(),
-              const.hedges_g_uninfl.abs().max()) * 1.15
+    lim = max(shown.hedges_g_infl.abs().max(),
+              shown.hedges_g_uninf.abs().max()) * 1.15
     ax.plot([-lim, lim], [-lim, lim], "k--", alpha=0.4, lw=1, label="$y = x$")
     ax.axhline(0, color="grey", lw=0.5, alpha=0.3)
     ax.axvline(0, color="grey", lw=0.5, alpha=0.3)
@@ -478,9 +421,6 @@ def generate_scatter_comparison(same_dir, fig_dir):
     ax.set_ylabel("Hedges' $g$ (uninflamed UC vs HC)", fontsize=12)
     ax.set_aspect("equal")
     ax.legend(fontsize=9, loc="upper left")
-
-    cb = fig.colorbar(sc, ax=ax, shrink=0.75, pad=0.02)
-    cb.set_label("$|g_{\\mathrm{uninfl}} \\,/\\, g_{\\mathrm{infl}} - 1|$", fontsize=11)
 
     out = f"{fig_dir}/scatter_comparison.pdf"
     plt.savefig(out, dpi=300, bbox_inches="tight")
@@ -755,8 +695,9 @@ def generate_csv_tables(data_dir, output_dir):
     for label, subdir, fname in [
         ("S1", "uc_vs_hc", "gene_meta_significant.csv"),
         ("S2", "uninf_vs_hc", "gene_meta_significant.csv"),
-        ("S3", "cd_vs_hc", "gene_meta_significant.csv"),
-        ("S4", "uc_vs_cd", "gene_meta_significant.csv"),
+        ("S3", "infl_vs_uninfl", "gene_meta_significant.csv"),
+        ("S4", "cd_vs_hc", "gene_meta_significant.csv"),
+        ("S5", "uc_vs_cd", "gene_meta_significant.csv"),
     ]:
         df = load_csv(f"{data_dir}/{subdir}/{fname}")
         use_cols = [c for c in cols_gene if c in df.columns]
@@ -764,16 +705,17 @@ def generate_csv_tables(data_dir, output_dir):
         df[use_cols].to_csv(out, index=False, float_format="%.6g")
         print(f"  → {out} ({len(df)} genes)")
 
-    # Pathway tables S5--S8: separate significant pathway CSV per comparison
+    # Pathway tables S6--S10: separate significant pathway CSV per comparison
     cols_pw = ["term", "datasets", "combined_nes", "se", "ci_lo", "ci_hi",
                "p_value", "q_value", "tau2", "I2", "direction",
                "direction_ratio", "lead_genes_core"]
 
     for label, subdir, desc in [
-        ("S5", "uc_vs_hc", "UC inflamed vs healthy controls"),
-        ("S6", "uninf_vs_hc", "UC uninflamed vs healthy controls"),
-        ("S7", "cd_vs_hc", "CD inflamed vs healthy controls"),
-        ("S8", "uc_vs_cd", "UC vs CD direct comparison"),
+        ("S6", "uc_vs_hc", "UC inflamed vs healthy controls"),
+        ("S7", "uninf_vs_hc", "UC uninflamed vs healthy controls"),
+        ("S8", "infl_vs_uninfl", "UC inflamed vs UC uninflamed"),
+        ("S9", "cd_vs_hc", "CD inflamed vs healthy controls"),
+        ("S10", "uc_vs_cd", "UC vs CD direct comparison"),
     ]:
         df = load_csv(f"{data_dir}/{subdir}/pathway_meta_significant.csv")
         use_cols = [c for c in cols_pw if c in df.columns]
@@ -781,13 +723,13 @@ def generate_csv_tables(data_dir, output_dir):
         df[use_cols].to_csv(out, index=False, float_format="%.6g")
         print(f"  → {out} ({len(df)} significant pathways — {desc})")
 
-    # Tables S18--S21: microarray vs RNA-seq concordance, from S_compare_platforms.py
-    # (S17 is the summary table printed in the document itself.)
+    # Tables S22--S25: microarray vs RNA-seq concordance, from S_compare_platforms.py
+    # (S21 is the summary table printed in the document itself.)
     for label, fname, desc in [
-        ("S18", "genes_inflamed", "genes, inflamed UC vs controls"),
-        ("S19", "genes_uninflamed", "genes, uninflamed UC vs controls"),
-        ("S20", "pathways_inflamed", "pathways, inflamed UC vs controls"),
-        ("S21", "pathways_uninflamed", "pathways, uninflamed UC vs controls"),
+        ("S22", "genes_inflamed", "genes, inflamed UC vs controls"),
+        ("S23", "genes_uninflamed", "genes, uninflamed UC vs controls"),
+        ("S24", "pathways_inflamed", "pathways, inflamed UC vs controls"),
+        ("S25", "pathways_uninflamed", "pathways, uninflamed UC vs controls"),
     ]:
         src = f"{data_dir}/comparison/{fname}.csv"
         if not os.path.exists(src):
@@ -799,16 +741,16 @@ def generate_csv_tables(data_dir, output_dir):
         df.to_csv(out, index=False, float_format="%.6g")
         print(f"  → {out} ({len(df)} rows — {desc})")
 
-    # Table S22: every leave-one-dataset-out fold, from S_leave_one_out.py
+    # Table S19: every leave-one-dataset-out fold, from S_leave_one_out.py
     src = f"{data_dir}/leave_one_out.csv"
     if os.path.exists(src):
         df = load_csv(src)
-        out = f"{output_dir}/Table_S22_leave_one_out_folds.csv"
+        out = f"{output_dir}/Table_S19_leave_one_out_folds.csv"
         df.to_csv(out, index=False, float_format="%.6g")
         print(f"  → {out} ({len(df)} folds across "
               f"{df.analysis.nunique()} analyses)")
     else:
-        print(f"  ! skipped Table S22: {src} not found "
+        print(f"  ! skipped Table S19: {src} not found "
               f"(run ibd/scripts/S_leave_one_out.py)")
 
 
@@ -858,58 +800,53 @@ def cluster_table_latex(data_dir, subdir, comparison_label):
     return "\n".join(lines)
 
 
-def constitutive_table_latex(df, direction):
-    """Generate LaTeX for constitutive or amplified gene table."""
-    sub = df.copy()
-    if direction == "constitutive_up":
-        sub = sub[sub.hedges_g_uninfl > 0].sort_values("hedges_g_uninfl", ascending=False)
-    elif direction == "constitutive_down":
-        sub = sub[sub.hedges_g_uninfl < 0].sort_values("hedges_g_uninfl")
-    else:
-        sub = sub.sort_values("delta_g", key=abs, ascending=False)
+def layer_table_latex(layers, layer, direction=None):
+    """Genes assigned to one activity layer by S_gene_layers.py."""
+    sub = layers[layers.layer == layer]
+    if direction is not None:
+        sub = sub[sub.direction == direction]
+    sub = sub.reindex(sub.hedges_g_uninf.abs().sort_values(ascending=False).index)
 
-    lines = []
-    lines.append(r"\begin{tabular}{lrrrrr}")
-    lines.append(r"\toprule")
-    lines.append(r"Gene & $g_{\mathrm{infl}}$ & $g_{\mathrm{uninfl}}$ & "
-                 r"Ratio & $\Delta g$ & $q_{\Delta}$ \\")
-    lines.append(r"\midrule")
+    lines = [r"\begin{tabular}{lrrrr}", r"\toprule",
+             r"Gene & $g_{\mathrm{infl}}$ & $g_{\mathrm{uninfl}}$ & "
+             r"$g_{\Delta}$ & $q_{\Delta}$ \\",
+             r"\midrule"]
 
-    for _, r in sub.iterrows():
-        gene = escape_latex(r.gene)
-        ratio = r.hedges_g_uninfl / r.hedges_g_infl if r.hedges_g_infl != 0 else np.nan
+    for r in sub.itertuples():
         lines.append(
-            f"  {gene} & ${r.hedges_g_infl:+.2f}$ & ${r.hedges_g_uninfl:+.2f}$ & "
-            f"${ratio:.2f}$ & ${r.delta_g:+.2f}$ & ${r.delta_q:.3f}$ \\\\"
-        )
+            f"  {escape_latex(r.gene)} & ${r.hedges_g_infl:+.2f}$ & "
+            f"${r.hedges_g_uninf:+.2f}$ & ${r.hedges_g_direct:+.2f}$ & "
+            f"${r.q_value_direct:.3f}$ \\\\")
 
-    lines.append(r"\bottomrule")
-    lines.append(r"\end{tabular}")
+    lines += [r"\bottomrule", r"\end{tabular}"]
     return "\n".join(lines)
 
 
 def build_supplementary_latex(fig_dir, output_dir, data_dir,
-                              constitutive_df, amplified_df,
                               s1_stats, s3_stats):
     """Build the complete supplementary LaTeX document."""
     print("Building supplementary LaTeX document...")
 
     # Pathway cluster tables for all 4 comparisons
+    layers = load_csv(f"{data_dir}/gene_layers.csv")
+    const_up_table = layer_table_latex(layers, "constitutive", "up")
+    const_down_table = layer_table_latex(layers, "constitutive", "down")
+    amplified_table = layer_table_latex(layers, "inflammation-amplified")
+    const_up = layers[(layers.layer == "constitutive") & (layers.direction == "up")]
+    const_down = layers[(layers.layer == "constitutive") & (layers.direction == "down")]
+    n_amplified = int((layers.layer == "inflammation-amplified").sum())
+
     uc_cluster_table = cluster_table_latex(data_dir, "uc_vs_hc", "UC inflamed vs HC")
     uninfl_cluster_table = cluster_table_latex(data_dir, "uninf_vs_hc", "Uninflamed UC vs HC")
     cd_cluster_table = cluster_table_latex(data_dir, "cd_vs_hc", "CD vs HC")
     uccd_cluster_table = cluster_table_latex(data_dir, "uc_vs_cd", "UC vs CD")
-
-    const_up = constitutive_df[constitutive_df.hedges_g_uninfl > 0]
-    const_down = constitutive_df[constitutive_df.hedges_g_uninfl < 0]
-
-    const_up_table = constitutive_table_latex(const_up, "constitutive_up")
-    const_down_table = constitutive_table_latex(const_down, "constitutive_down")
-    amplified_table = constitutive_table_latex(amplified_df, "amplified")
+    direct_cluster_table = cluster_table_latex(data_dir, "infl_vs_uninfl",
+                                               "UC inflamed vs UC uninflamed")
 
     # Count significant pathways per comparison for the text
     pw_counts, gene_counts = {}, {}
     for subdir, key in [("uc_vs_hc", "uc"), ("uninf_vs_hc", "uninfl"),
+                         ("infl_vs_uninfl", "direct"),
                          ("cd_vs_hc", "cd"), ("uc_vs_cd", "uccd")]:
         for counts, name in [(pw_counts, "pathway"), (gene_counts, "gene")]:
             try:
@@ -1015,34 +952,36 @@ of the NES variance approximation used in the REML framework.}
 \section{Supplementary Tables}
 % ══════════════════════════════════════════════════════════════════
 
-% ── Tables S1--S4 ──
-\subsection*{Tables S1--S4: Gene-level meta-analysis results}
+% ── Tables S1--S5 ──
+\subsection*{Tables S1--S5: Gene-level meta-analysis results}
 
-Full gene-level meta-analysis results for all four comparisons are provided as
+Full gene-level meta-analysis results for all five comparisons are provided as
 separate CSV files:
 
 \begin{itemize}
 \item \textbf{Table~S1}: UC inflamed vs healthy controls (""" + num(gene_counts["uc"]) + r""" significant genes)
 \item \textbf{Table~S2}: UC uninflamed vs healthy controls (""" + num(gene_counts["uninfl"]) + r""" significant genes)
-\item \textbf{Table~S3}: CD inflamed vs healthy controls (""" + num(gene_counts["cd"]) + r""" significant genes)
-\item \textbf{Table~S4}: UC vs CD direct comparison (""" + num(gene_counts["uccd"]) + r""" significant genes)
+\item \textbf{Table~S3}: UC inflamed vs UC uninflamed (""" + num(gene_counts["direct"]) + r""" significant genes)
+\item \textbf{Table~S4}: CD inflamed vs healthy controls (""" + num(gene_counts["cd"]) + r""" significant genes)
+\item \textbf{Table~S5}: UC vs CD direct comparison (""" + num(gene_counts["uccd"]) + r""" significant genes)
 \end{itemize}
 
 \noindent Each file contains: gene symbol, number of datasets, Hedges'~$g$, standard error,
 95\% confidence interval, $p$-value, $q$-value (Benjamini--Hochberg), $\tau^2$, $I^2$,
 direction of effect, and direction consistency ratio.
 
-% ── Tables S5--S8 ──
-\subsection*{Tables S5--S8: Pathway-level meta-analysis results}
+% ── Tables S6--S10 ──
+\subsection*{Tables S6--S10: Pathway-level meta-analysis results}
 
-Significant pathway-level meta-analysis results ($q < 0.05$) for all four comparisons
+Significant pathway-level meta-analysis results ($q < 0.05$) for all five comparisons
 are provided as separate CSV files:
 
 \begin{itemize}
-\item \textbf{Table~S5}: UC inflamed vs healthy controls (""" + str(pw_counts["uc"]) + r""" significant pathways)
-\item \textbf{Table~S6}: UC uninflamed vs healthy controls (""" + str(pw_counts["uninfl"]) + r""" significant pathways)
-\item \textbf{Table~S7}: CD inflamed vs healthy controls (""" + str(pw_counts["cd"]) + r""" significant pathways)
-\item \textbf{Table~S8}: UC vs CD direct comparison (""" + str(pw_counts["uccd"]) + r""" significant pathways)
+\item \textbf{Table~S6}: UC inflamed vs healthy controls (""" + str(pw_counts["uc"]) + r""" significant pathways)
+\item \textbf{Table~S7}: UC uninflamed vs healthy controls (""" + str(pw_counts["uninfl"]) + r""" significant pathways)
+\item \textbf{Table~S8}: UC inflamed vs UC uninflamed (""" + str(pw_counts["direct"]) + r""" significant pathways)
+\item \textbf{Table~S9}: CD inflamed vs healthy controls (""" + str(pw_counts["cd"]) + r""" significant pathways)
+\item \textbf{Table~S10}: UC vs CD direct comparison (""" + str(pw_counts["uccd"]) + r""" significant pathways)
 \end{itemize}
 
 \noindent Each file contains: Reactome pathway term, number of datasets, combined NES, standard error,
@@ -1050,10 +989,10 @@ are provided as separate CSV files:
 
 \clearpage
 
-% ── Table S9 ──
-\subsection*{Table S9: Pathway clusters --- UC inflamed vs healthy controls}
+% ── Pathway cluster tables ──
+\subsection*{Pathway clusters --- UC inflamed vs healthy controls}
 
-\setcounter{table}{8}
+\setcounter{table}{10}
 \begin{table}[H]
 \centering
 \scriptsize
@@ -1062,12 +1001,11 @@ are provided as separate CSV files:
 Each row is a community of co-enriched Reactome pathways identified by Louvain clustering
 on shared leading-edge genes. Positive NES = upregulated in inflamed UC relative to controls;
 negative NES = downregulated.}
-\label{tab:s9}
+\label{tab:clusters_uc}
 \end{table}
 \clearpage
 
-% ── Table S10 ──
-\subsection*{Table S10: Pathway clusters --- uninflamed UC vs healthy controls}
+\subsection*{Pathway clusters --- uninflamed UC vs healthy controls}
 
 \begin{table}[H]
 \centering
@@ -1077,12 +1015,25 @@ negative NES = downregulated.}
 Each row is a community of co-enriched Reactome pathways identified by Louvain clustering
 on shared leading-edge genes. Positive NES = upregulated in uninflamed UC relative to controls;
 negative NES = downregulated.}
-\label{tab:s10}
+\label{tab:clusters_uninfl}
 \end{table}
 \clearpage
 
-% ── Table S11 ──
-\subsection*{Table S11: Pathway clusters --- CD inflamed vs healthy controls}
+\subsection*{Pathway clusters --- UC inflamed vs UC uninflamed}
+
+\begin{table}[H]
+\centering
+\scriptsize
+""" + direct_cluster_table + r"""
+\caption{Pathway clusters from the direct inflamed versus uninflamed UC analysis.
+Each row is a community of co-enriched Reactome pathways identified by Louvain clustering
+on shared leading-edge genes. Positive NES = higher in inflamed than uninflamed UC;
+negative NES = lower.}
+\label{tab:clusters_direct}
+\end{table}
+\clearpage
+
+\subsection*{Pathway clusters --- CD inflamed vs healthy controls}
 
 \begin{table}[H]
 \centering
@@ -1092,12 +1043,11 @@ negative NES = downregulated.}
 Each row is a community of co-enriched Reactome pathways identified by Louvain clustering
 on shared leading-edge genes. Positive NES = upregulated in CD relative to controls;
 negative NES = downregulated.}
-\label{tab:s11}
+\label{tab:clusters_cd}
 \end{table}
 \clearpage
 
-% ── Table S12 ──
-\subsection*{Table S12: Pathway clusters --- UC vs CD direct comparison}
+\subsection*{Pathway clusters --- UC vs CD direct comparison}
 
 \begin{table}[H]
 \centering
@@ -1107,23 +1057,23 @@ negative NES = downregulated.}
 Each row is a community of co-enriched Reactome pathways identified by Louvain clustering
 on shared leading-edge genes. Positive NES = upregulated in UC relative to CD;
 negative NES = downregulated in UC relative to CD.}
-\label{tab:s12}
+\label{tab:clusters_uccd}
 \end{table}
 \clearpage
 
-% ── Table S13 ──
-\subsection*{Table S13: Constitutive genes}
+% ── Activity-layer gene tables ──
+\subsection*{Constitutive genes}
 
-Genes significant in both the inflamed and uninflamed UC vs control meta-analyses,
-with no significant difference between conditions (Wald $q_{\Delta} \geq 0.05$)
-and effect-size ratio within $0.70$--$1.30$.
+Genes significant against controls both when inflamed and when uninflamed, and
+not significantly different between the two states, by the activity-layer triage
+across the three UC contrasts. $g_{\Delta}$ is the effect size of the direct
+inflamed versus uninflamed contrast, in which these genes do not differ.
 
 \begin{table}[H]
 \centering
 \scriptsize
-\caption{Constitutive genes (""" + str(len(constitutive_df)) + r""" genes: """ + str(len(const_up)) + r""" upregulated, """ + str(len(const_down)) + r""" downregulated).
-Ratio $= g_{\mathrm{uninfl}} / g_{\mathrm{infl}}$.}
-\label{tab:s13}
+\caption{Constitutive genes (""" + str(len(const_up) + len(const_down)) + r""" genes: """ + str(len(const_up)) + r""" upregulated, """ + str(len(const_down)) + r""" downregulated).}
+\label{tab:constitutive}
 """ + const_up_table + r"""
 
 \vspace{0.5em}
@@ -1132,21 +1082,20 @@ Ratio $= g_{\mathrm{uninfl}} / g_{\mathrm{infl}}$.}
 \end{table}
 \clearpage
 
-% ── Table S14 ──
-\subsection*{Table S14: Inflammation-amplified genes}
+\subsection*{Inflammation-amplified genes}
 
-Genes significant in both the inflamed and uninflamed UC vs control meta-analyses
-whose effect sizes differed significantly between conditions (Wald $q_{\Delta} < 0.05$).
+Genes significant in all three UC contrasts: already altered in uninflamed
+mucosa, and further changed when inflammation is present.
 
 \begin{table}[H]
 \centering
 \scriptsize
-\caption{Inflammation-amplified genes (""" + str(len(amplified_df)) + r""" genes).
-$\Delta g = g_{\mathrm{infl}} - g_{\mathrm{uninfl}}$.}
-\label{tab:s14}
+\caption{Inflammation-amplified genes (""" + str(n_amplified) + r""" genes).
+$g_{\Delta}$ is the effect size of the direct inflamed versus uninflamed contrast.}
+\label{tab:amplified}
 """ + amplified_table + r"""
 \end{table}
-""" + leave_one_out_section(data_dir) + rnaseq_screening_section(data_dir) + concordance_tables_section(data_dir) + r"""
+""" + leave_one_out_section(data_dir) + rnaseq_validation_section(data_dir) + r"""
 \end{document}
 """
 
@@ -1183,9 +1132,19 @@ def leave_one_out_section(data_dir):
             f"{group.correlation.min():.3f} & "
             f"{100 * w.random_effects.max():.0f}\\% & {100 * w.fixed_effect.max():.0f}\\% \\\\")
 
+    fold_note = ""
+    if len(folds):
+        fold_note = (r"""
+
+\noindent\textbf{Table~S19} is the fold-level companion to this summary: it
+gives all """ + str(len(folds)) + r""" folds individually (the cohort omitted, its share of the
+pooled weight, the genes still significant, the fraction of the full list
+retained, and the fold-to-full effect-size correlation), as a separate CSV
+file.""")
+
     return r"""
 \clearpage
-\subsection*{Table S15: Leave-one-dataset-out sensitivity}
+\subsection*{Leave-one-dataset-out sensitivity}
 
 Each meta-analysis was repeated with every contributing cohort omitted in turn.
 Only the pooling step is repeated; per-dataset statistics and enrichment scores
@@ -1202,7 +1161,7 @@ the random-effects weights used here and under fixed-effect weights.
 \centering
 \small
 \caption{Leave-one-dataset-out results for each meta-analysis.}
-\label{tab:s15}
+\label{tab:leave_one_out}
 \begin{tabular}{lrrrrrr}
 \toprule
  & & Significant & & & \multicolumn{2}{c}{Largest cohort weight} \\
@@ -1213,11 +1172,12 @@ Analysis & Cohorts & genes & Retained & min $r$ & random & fixed \\
 \bottomrule
 \end{tabular}
 \end{table}
+""" + fold_note + r"""
 """
 
 
 def rnaseq_screening_section(data_dir):
-    """Table S16: how the RNA-seq validation set was selected."""
+    """How the RNA-seq validation set was selected (printed table)."""
     path = f"{data_dir}/rnaseq_screening.csv"
     if not os.path.exists(path):
         return ""
@@ -1235,7 +1195,8 @@ def rnaseq_screening_section(data_dir):
 
     return r"""
 \clearpage
-\subsection*{Table S16: Selection of the RNA-seq validation cohorts}
+\setcounter{table}{19}
+\subsection*{Selection of the RNA-seq validation cohorts}
 
 The GEO search of the discovery analysis was repeated restricted to expression
 profiling by high-throughput sequencing, and the same inclusion criteria were
@@ -1251,7 +1212,7 @@ The remainder were excluded as follows: """ + breakdown + r""".
 \caption{RNA-seq datasets meeting the inclusion criteria of the discovery
 analysis. Samples is the size of the full series; the counts entering each
 comparison are given in the Methods.}
-\label{tab:s16}
+\label{tab:rnaseq_screening}
 \begin{tabular}{lrp{8cm}}
 \toprule
 Accession & Samples & Basis for inclusion \\
@@ -1263,10 +1224,14 @@ Accession & Samples & Basis for inclusion \\
 """
 
 
-def concordance_tables_section(data_dir):
-    """Tables S17--S21: the CSV outputs of the two validation analyses."""
+def rnaseq_validation_section(data_dir):
+    """The RNA-seq validation block: cohort selection, then concordance."""
+    return rnaseq_screening_section(data_dir) + _concordance_section(data_dir)
+
+
+def _concordance_section(data_dir):
+    """Cross-platform concordance: printed summary plus the CSV companions."""
     summary_path = f"{data_dir}/comparison/summary.csv"
-    folds_path = f"{data_dir}/leave_one_out.csv"
     if not os.path.exists(summary_path):
         return ""
 
@@ -1281,22 +1246,11 @@ def concordance_tables_section(data_dir):
     rows = "\n".join([row("Inflamed UC vs controls", "inflamed"),
                        row("Uninflamed UC vs controls", "uninflamed")])
 
-    folds_note = ""
-    if os.path.exists(folds_path):
-        folds = pd.read_csv(folds_path)
-        folds_note = (r"""
-
-\noindent\textbf{Table~S22} gives every leave-one-dataset-out fold behind
-Table~\ref{tab:s15} (""" + str(len(folds)) + r""" folds across """
-            + str(folds.analysis.nunique()) + r""" analyses): the cohort omitted, its share of
-the pooled weight, the number of genes still significant, the fraction of the
-full gene list retained, and the correlation between fold and full effect sizes.""")
-
     return r"""
 \clearpage
-\subsection*{Tables S17--S22: Validation and sensitivity results}
+\subsection*{Cross-platform concordance}
 
-\textbf{Tables~S18--S21} give the gene- and pathway-level concordance between the
+\textbf{Tables~S22--S25} give the gene- and pathway-level concordance between the
 microarray discovery meta-analysis and the independent RNA-seq validation
 meta-analysis, for the inflamed and uninflamed comparisons separately. Each file
 reports the effect size and $q$-value on both platforms, whether the gene or
@@ -1309,7 +1263,7 @@ direction on the RNA-seq side.
 \small
 \caption{Cross-platform concordance summary. $r$ is the Pearson correlation of
 effect sizes (Hedges' $g$ for genes, NES for pathways) over all shared features.}
-\label{tab:s17}
+\label{tab:concordance}
 \begin{tabular}{lrrrrrr}
 \toprule
 & \multicolumn{3}{c}{Genes} & \multicolumn{3}{c}{Pathways} \\
@@ -1320,9 +1274,6 @@ Comparison & Shared & $r$ & Replicated & Shared & $r$ & Replicated \\
 \bottomrule
 \end{tabular}
 \end{table}
-""" + folds_note + r"""
-
-
 """
 
 
@@ -1362,8 +1313,8 @@ def main():
     s3_stats = generate_figure_s3(data_dir, fig_dir)
 
     # ── Main-text figures (also regenerated for completeness) ──
-    constitutive_df, amplified_df, same_dir = compute_constitutive_analysis(data_dir)
-    generate_scatter_comparison(same_dir, fig_dir)
+    layers = load_csv(f"{data_dir}/gene_layers.csv")
+    generate_scatter_comparison(layers, fig_dir)
     generate_pathway_heatmap(data_dir, fig_dir)
     generate_uc_cd_concordance(data_dir, fig_dir)
 
@@ -1372,7 +1323,6 @@ def main():
 
     # ── LaTeX supplementary document ──
     tex_path = build_supplementary_latex(fig_dir, output_dir, data_dir,
-                                          constitutive_df, amplified_df,
                                           s1_stats, s3_stats)
     compile_latex(tex_path, output_dir)
 

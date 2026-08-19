@@ -167,7 +167,7 @@ Scripts are numbered in order. Prefixes indicate output type: `fig` = figure, `t
 # Figures
 python ibd/scripts/00_fig_generate_methods_figure.py          # Methods flowchart (SVG)
 python ibd/scripts/03_fig_volcano_plot.py                      # Volcano plot
-python ibd/scripts/06_fig_scatter_comparison.py --input results/revision_v2/comparison_stats.csv  # Constitutive gene scatter
+python ibd/scripts/06_fig_scatter_comparison.py                # Activity-layer scatter (constitutive vs amplified)
 python ibd/scripts/07_fig_pathway_heatmap.py                   # Three-way pathway heatmap
 python ibd/scripts/08_fig_uc_cd_concordance.py                 # UC-CD concordance + pathway clusters
 
