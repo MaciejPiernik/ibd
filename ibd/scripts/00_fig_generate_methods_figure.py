@@ -264,7 +264,7 @@ def make_svg():
     sy = r2 + 8
     vbox(sx, sy, sw_, sh,
          ["Stouffer's weighted z-method",
-          "(92.5% concordance, r = 0.38)"])
+          "(92.5% concordance, r = 0.89)"])
     vconn(sx, sy + sh/2, px + BW + 2, sy + sh/2)
 
     # Row 3: pathway — LE aggregation; gene track continues

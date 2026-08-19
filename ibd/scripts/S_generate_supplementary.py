@@ -136,6 +136,8 @@ def generate_figure_s1(data_dir, fig_dir):
     ax.set_title("B.  Effect size vs heterogeneity", fontweight="bold", loc="left")
 
     rho, _ = stats.spearmanr(abs_g, i2)
+    caption_stats = {"n_genes": len(meta), "median_i2": float(np.median(i2)),
+                     "rho": float(rho)}
     ax.text(0.97, 0.05, f"Spearman ρ = {rho:.2f}",
             transform=ax.transAxes, fontsize=8, ha="right",
             bbox=dict(facecolor="white", edgecolor="#cccccc", alpha=0.9,
@@ -146,6 +148,8 @@ def generate_figure_s1(data_dir, fig_dir):
     plt.savefig(out, dpi=300, bbox_inches="tight")
     plt.close()
     print(f"  → {out}")
+
+    return caption_stats
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -319,7 +323,16 @@ def generate_figure_s3(data_dir, fig_dir):
     concordance = reml_sig.sig_stouffer.mean()
     r_z, _ = stats.pearsonr(merged.combined_nes, merged.z_stouffer)
 
-    print(f"  Stouffer concordance: {concordance:.1%}, r = {r_z:.2f}")
+    # Both statistics are signed, so this asks whether the two methods agree on
+    # the direction of each pathway they both call significant.
+    jointly = merged[merged.sig_reml & merged.sig_stouffer]
+    direction_concordance = float(
+        (np.sign(jointly.combined_nes) == np.sign(jointly.z_stouffer)).mean())
+    caption_stats = {"concordance": float(concordance), "r_z": float(r_z),
+                     "direction_concordance": direction_concordance}
+
+    print(f"  Stouffer concordance: {concordance:.1%}, "
+          f"direction {direction_concordance:.1%}, r = {r_z:.2f}")
 
     # Plot
     fig, ax = plt.subplots(figsize=(5.5, 5))
@@ -358,6 +371,8 @@ def generate_figure_s3(data_dir, fig_dir):
     plt.savefig(out, dpi=300, bbox_inches="tight")
     plt.close()
     print(f"  → {out}")
+
+    return caption_stats
 
     return concordance, r_z
 
@@ -766,10 +781,55 @@ def generate_csv_tables(data_dir, output_dir):
         df[use_cols].to_csv(out, index=False, float_format="%.6g")
         print(f"  → {out} ({len(df)} significant pathways — {desc})")
 
+    # Tables S18--S21: microarray vs RNA-seq concordance, from S_compare_platforms.py
+    # (S17 is the summary table printed in the document itself.)
+    for label, fname, desc in [
+        ("S18", "genes_inflamed", "genes, inflamed UC vs controls"),
+        ("S19", "genes_uninflamed", "genes, uninflamed UC vs controls"),
+        ("S20", "pathways_inflamed", "pathways, inflamed UC vs controls"),
+        ("S21", "pathways_uninflamed", "pathways, uninflamed UC vs controls"),
+    ]:
+        src = f"{data_dir}/comparison/{fname}.csv"
+        if not os.path.exists(src):
+            print(f"  ! skipped Table {label}: {src} not found "
+                  f"(run ibd/scripts/S_compare_platforms.py)")
+            continue
+        df = load_csv(src)
+        out = f"{output_dir}/Table_{label}_rnaseq_concordance_{fname}.csv"
+        df.to_csv(out, index=False, float_format="%.6g")
+        print(f"  → {out} ({len(df)} rows — {desc})")
+
+    # Table S22: every leave-one-dataset-out fold, from S_leave_one_out.py
+    src = f"{data_dir}/leave_one_out.csv"
+    if os.path.exists(src):
+        df = load_csv(src)
+        out = f"{output_dir}/Table_S22_leave_one_out_folds.csv"
+        df.to_csv(out, index=False, float_format="%.6g")
+        print(f"  → {out} ({len(df)} folds across "
+              f"{df.analysis.nunique()} analyses)")
+    else:
+        print(f"  ! skipped Table S22: {src} not found "
+              f"(run ibd/scripts/S_leave_one_out.py)")
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  LATEX SUPPLEMENTARY DOCUMENT
 # ═══════════════════════════════════════════════════════════════════════════════
+
+def cohort_profile(data_dir, subdir="uc_vs_hc"):
+    """How many cohorts contributed to a comparison, and on how many platforms."""
+    datasets = load_csv(f"{data_dir}/{subdir}/dataset_summary.csv")["dataset"]
+
+    platforms = {}
+    for table in ["data/DAQ.csv", "data/DAQ_rnaseq.csv"]:
+        if os.path.exists(table):
+            acq = pd.read_csv(table, sep=";")
+            platforms.update(dict(zip(acq["Accession number"], acq["Platform"])))
+
+    used = {platforms[d] for d in datasets if d in platforms}
+
+    return {"n_datasets": len(datasets), "n_platforms": len(used)}
+
 
 def cluster_table_latex(data_dir, subdir, comparison_label):
     """Generate LaTeX for a pathway cluster table."""
@@ -829,7 +889,8 @@ def constitutive_table_latex(df, direction):
 
 
 def build_supplementary_latex(fig_dir, output_dir, data_dir,
-                              constitutive_df, amplified_df):
+                              constitutive_df, amplified_df,
+                              s1_stats, s3_stats):
     """Build the complete supplementary LaTeX document."""
     print("Building supplementary LaTeX document...")
 
@@ -847,14 +908,20 @@ def build_supplementary_latex(fig_dir, output_dir, data_dir,
     amplified_table = constitutive_table_latex(amplified_df, "amplified")
 
     # Count significant pathways per comparison for the text
-    pw_counts = {}
+    pw_counts, gene_counts = {}, {}
     for subdir, key in [("uc_vs_hc", "uc"), ("uninf_vs_hc", "uninfl"),
                          ("cd_vs_hc", "cd"), ("uc_vs_cd", "uccd")]:
-        try:
-            df = load_csv(f"{data_dir}/{subdir}/pathway_meta_significant.csv")
-            pw_counts[key] = len(df)
-        except Exception:
-            pw_counts[key] = "?"
+        for counts, name in [(pw_counts, "pathway"), (gene_counts, "gene")]:
+            try:
+                counts[key] = len(load_csv(f"{data_dir}/{subdir}/{name}_meta_significant.csv"))
+            except Exception:
+                counts[key] = "?"
+
+    cohorts = cohort_profile(data_dir)
+
+    def num(value):
+        """Thousands separator in the form LaTeX wants."""
+        return f"{value:,}".replace(",", "{,}") if isinstance(value, int) else str(value)
 
     doc = r"""\documentclass[11pt,a4paper]{article}
 \usepackage[margin=2cm]{geometry}
@@ -874,7 +941,7 @@ def build_supplementary_latex(fig_dir, output_dir, data_dir,
 
 \title{\textbf{Supplementary Materials}\\[0.3em]
 \large Large-scale transcriptomic meta-analysis identifies\\
-    constitutive and inflammation-dependent signatures in ulcerative colitis}
+    constitutive and inflammation-dependent layers in ulcerative colitis}
 \author{Piernik et al.}
 \date{}
 
@@ -892,13 +959,13 @@ def build_supplementary_latex(fig_dir, output_dir, data_dir,
 \centering
 \includegraphics[width=\textwidth]{""" + os.path.abspath(f"{fig_dir}/figure_s1.pdf") + r"""}
 \caption{\textbf{Heterogeneity diagnostics for the inflamed UC vs control gene-level meta-analysis.}
-\textbf{(A)}~Distribution of $I^2$ across 7{,}727 significantly dysregulated genes.
-The median $I^2$ of 0.76 reflects variation in effect-size magnitude across the 12 datasets
-and 9 microarray platforms, rather than inconsistency in direction (controlled by the
+\textbf{(A)}~Distribution of $I^2$ across """ + num(s1_stats["n_genes"]) + r""" significantly dysregulated genes.
+The median $I^2$ of """ + f'{s1_stats["median_i2"]:.2f}' + r""" reflects variation in effect-size magnitude across the """ + str(cohorts["n_datasets"]) + r""" datasets
+and """ + str(cohorts["n_platforms"]) + r""" microarray platforms, rather than inconsistency in direction (controlled by the
 $\geq 80\%$ direction consistency filter).
 \textbf{(B)}~Relationship between absolute effect size ($|g|$) and heterogeneity ($I^2$).
 Colour encodes statistical significance ($-\log_{10} q$).
-Genes with large effects tend to have high $I^2$ (Spearman $\rho = 0.74$),
+Genes with large effects tend to have high $I^2$ (Spearman $\rho = """ + f'{s1_stats["rho"]:.2f}' + r"""$),
 while genes ranking highest by $q$-value have low $I^2$, reflecting complementary
 properties of the two ranking criteria.}
 \label{fig:s1}
@@ -937,8 +1004,8 @@ The $x$-axis shows the REML combined normalized enrichment score (NES); the $y$-
 Stouffer's weighted $z$-statistic (weights = $\sqrt{n}$).
 Blue points are significant by both methods ($q < 0.05$); red squares are REML-only;
 green triangles are Stouffer-only; grey points are non-significant by both.
-91.3\% of REML-significant pathways were confirmed by the Stouffer method,
-with 100\% direction concordance and Pearson $r = 0.89$, supporting the validity
+""" + f'{s3_stats["concordance"]:.1%}'.replace("%", r"\%") + r""" of REML-significant pathways were confirmed by the Stouffer method,
+with """ + f'{s3_stats["direction_concordance"]:.0%}'.replace("%", r"\%") + r""" direction concordance and Pearson $r = """ + f'{s3_stats["r_z"]:.2f}' + r"""$, supporting the validity
 of the NES variance approximation used in the REML framework.}
 \label{fig:s3}
 \end{figure}
@@ -955,10 +1022,10 @@ Full gene-level meta-analysis results for all four comparisons are provided as
 separate CSV files:
 
 \begin{itemize}
-\item \textbf{Table~S1}: UC inflamed vs healthy controls (7{,}727 significant genes)
-\item \textbf{Table~S2}: UC uninflamed vs healthy controls (165 significant genes)
-\item \textbf{Table~S3}: CD inflamed vs healthy controls (2{,}494 significant genes)
-\item \textbf{Table~S4}: UC vs CD direct comparison (1{,}831 significant genes)
+\item \textbf{Table~S1}: UC inflamed vs healthy controls (""" + num(gene_counts["uc"]) + r""" significant genes)
+\item \textbf{Table~S2}: UC uninflamed vs healthy controls (""" + num(gene_counts["uninfl"]) + r""" significant genes)
+\item \textbf{Table~S3}: CD inflamed vs healthy controls (""" + num(gene_counts["cd"]) + r""" significant genes)
+\item \textbf{Table~S4}: UC vs CD direct comparison (""" + num(gene_counts["uccd"]) + r""" significant genes)
 \end{itemize}
 
 \noindent Each file contains: gene symbol, number of datasets, Hedges'~$g$, standard error,
@@ -1079,7 +1146,7 @@ $\Delta g = g_{\mathrm{infl}} - g_{\mathrm{uninfl}}$.}
 \label{tab:s14}
 """ + amplified_table + r"""
 \end{table}
-""" + leave_one_out_section(data_dir) + rnaseq_screening_section(data_dir) + r"""
+""" + leave_one_out_section(data_dir) + rnaseq_screening_section(data_dir) + concordance_tables_section(data_dir) + r"""
 \end{document}
 """
 
@@ -1196,6 +1263,69 @@ Accession & Samples & Basis for inclusion \\
 """
 
 
+def concordance_tables_section(data_dir):
+    """Tables S17--S21: the CSV outputs of the two validation analyses."""
+    summary_path = f"{data_dir}/comparison/summary.csv"
+    folds_path = f"{data_dir}/leave_one_out.csv"
+    if not os.path.exists(summary_path):
+        return ""
+
+    summary = pd.read_csv(summary_path).set_index("comparison")
+
+    def row(label, key):
+        r = summary.loc[key]
+        return (f"  {label} & {int(r.shared_genes):,} & {r.r_all:.2f} & "
+                f"{100 * r.replicated:.0f}\\% & {int(r.pathway_shared_pathways):,} & "
+                f"{r.pathway_r_all:.2f} & {100 * r.pathway_replicated:.0f}\\% \\\\")
+
+    rows = "\n".join([row("Inflamed UC vs controls", "inflamed"),
+                       row("Uninflamed UC vs controls", "uninflamed")])
+
+    folds_note = ""
+    if os.path.exists(folds_path):
+        folds = pd.read_csv(folds_path)
+        folds_note = (r"""
+
+\noindent\textbf{Table~S22} gives every leave-one-dataset-out fold behind
+Table~\ref{tab:s15} (""" + str(len(folds)) + r""" folds across """
+            + str(folds.analysis.nunique()) + r""" analyses): the cohort omitted, its share of
+the pooled weight, the number of genes still significant, the fraction of the
+full gene list retained, and the correlation between fold and full effect sizes.""")
+
+    return r"""
+\clearpage
+\subsection*{Tables S17--S22: Validation and sensitivity results}
+
+\textbf{Tables~S18--S21} give the gene- and pathway-level concordance between the
+microarray discovery meta-analysis and the independent RNA-seq validation
+meta-analysis, for the inflamed and uninflamed comparisons separately. Each file
+reports the effect size and $q$-value on both platforms, whether the gene or
+pathway was significant on each, and whether the two agree in direction.
+Replicated means significant on the microarray side and significant in the same
+direction on the RNA-seq side.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Cross-platform concordance summary. $r$ is the Pearson correlation of
+effect sizes (Hedges' $g$ for genes, NES for pathways) over all shared features.}
+\label{tab:s17}
+\begin{tabular}{lrrrrrr}
+\toprule
+& \multicolumn{3}{c}{Genes} & \multicolumn{3}{c}{Pathways} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7}
+Comparison & Shared & $r$ & Replicated & Shared & $r$ & Replicated \\
+\midrule
+""" + rows + r"""
+\bottomrule
+\end{tabular}
+\end{table}
+""" + folds_note + r"""
+
+
+"""
+
+
 def compile_latex(tex_path, output_dir):
     """Compile LaTeX to PDF."""
     print("Compiling LaTeX to PDF...")
@@ -1227,9 +1357,9 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     # ── Figures ──
-    generate_figure_s1(data_dir, fig_dir)
+    s1_stats = generate_figure_s1(data_dir, fig_dir)
     generate_figure_s2(data_dir, fig_dir)
-    generate_figure_s3(data_dir, fig_dir)
+    s3_stats = generate_figure_s3(data_dir, fig_dir)
 
     # ── Main-text figures (also regenerated for completeness) ──
     constitutive_df, amplified_df, same_dir = compute_constitutive_analysis(data_dir)
@@ -1242,7 +1372,8 @@ def main():
 
     # ── LaTeX supplementary document ──
     tex_path = build_supplementary_latex(fig_dir, output_dir, data_dir,
-                                          constitutive_df, amplified_df)
+                                          constitutive_df, amplified_df,
+                                          s1_stats, s3_stats)
     compile_latex(tex_path, output_dir)
 
     print("\n" + "=" * 70)

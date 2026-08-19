@@ -179,7 +179,6 @@ python ibd/scripts/05_tab_pathway_clusters.py                  # Pathway cluster
 python ibd/scripts/09_tab_cross_comparison_table.py            # Cross-comparison gene table
 
 # Supplementary
-python ibd/scripts/S_generate_figures.py                       # Forest plots, I² diagnostics, Stouffer's check
 python ibd/scripts/S_generate_supplementary.py --data-dir results/revision_v2/  # Full supplementary PDF + CSV tables
 ```
 
