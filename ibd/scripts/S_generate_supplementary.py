@@ -381,10 +381,36 @@ def generate_figure_s3(data_dir, fig_dir):
 #  CONSTITUTIVE ANALYSIS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def generate_scatter_comparison(layers, fig_dir):
-    """Scatter of the two activity layers present in uninflamed mucosa."""
+def get_protein_coding_genes(path: str | None = None) -> set[str]:
+    """Return a set of HGNC-approved protein-coding gene symbols.
+
+    Parameters
+    ----------
+    path : str or None
+        Local path to an HGNC custom-download TSV (must contain columns
+        ``Approved symbol`` and ``Locus group``).  If *None*, downloads
+        the current list from genenames.org.
+    """
+    HGNC_URL = (
+        'https://www.genenames.org/cgi-bin/download/custom?'
+        'col=gd_app_sym&col=gd_locus_group&status=Approved&'
+        'hgnc_datea=&hgnc_dateb=&order_by=gd_app_sym_sort&'
+        'format=text&submit=submit'
+    )
+    src = path if path else HGNC_URL
+    df = pd.read_csv(src, sep='\t')
+    return set(df.loc[df['Locus group'] == 'protein-coding gene', 'Approved symbol'])
+
+
+def generate_scatter_comparison(layers, fig_dir, hgnc=None):
+    """Scatter of the two activity layers present in uninflamed mucosa.
+
+    Restricted to protein-coding genes, so that the figure and the gene-level
+    tables in the main text describe the same set.
+    """
     print("Generating scatter comparison plot...")
 
+    layers = layers[layers.gene.isin(get_protein_coding_genes(hgnc))]
     styles = [("constitutive", "#2166ac", "Constitutive"),
               ("inflammation-amplified", "#d6604d", "Inflammation-amplified")]
     shown = layers[layers.layer.isin([name for name, _, _ in styles])]

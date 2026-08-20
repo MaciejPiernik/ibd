@@ -1,7 +1,8 @@
 """
 Scatter plot of the two activity layers present in uninflamed mucosa.
 
-Each point is a gene assigned by the activity-layer triage (S_gene_layers.py).
+Each point is a protein-coding gene assigned by the activity-layer triage
+(S_gene_layers.py); non-coding symbols are excluded from the plot entirely.
 Both layers are altered in uninflamed UC; they differ in whether the direct
 inflamed-versus-uninflamed contrast finds a further change. Vertical distance
 below the y = x diagonal is how much inflammation adds.
@@ -31,15 +32,39 @@ LAYERS = [
 ]
 
 
+def get_protein_coding_genes(path: str | None = None) -> set[str]:
+    """Return a set of HGNC-approved protein-coding gene symbols.
+
+    Parameters
+    ----------
+    path : str or None
+        Local path to an HGNC custom-download TSV (must contain columns
+        ``Approved symbol`` and ``Locus group``).  If *None*, downloads
+        the current list from genenames.org.
+    """
+    HGNC_URL = (
+        'https://www.genenames.org/cgi-bin/download/custom?'
+        'col=gd_app_sym&col=gd_locus_group&status=Approved&'
+        'hgnc_datea=&hgnc_dateb=&order_by=gd_app_sym_sort&'
+        'format=text&submit=submit'
+    )
+    src = path if path else HGNC_URL
+    df = pd.read_csv(src, sep='\t')
+    return set(df.loc[df['Locus group'] == 'protein-coding gene', 'Approved symbol'])
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", default="results/revision_v2/gene_layers.csv",
                         help="gene_layers.csv from S_gene_layers.py")
     parser.add_argument("--output", default="figures/scatter_comparison.pdf")
     parser.add_argument("--dpi", type=int, default=300)
+    parser.add_argument("--hgnc", default=None,
+                        help="Path to HGNC TSV; if omitted, downloads from genenames.org")
     args = parser.parse_args()
 
     genes = pd.read_csv(args.input)
+    genes = genes[genes.gene.isin(get_protein_coding_genes(args.hgnc))]
     shown = genes[genes.layer.isin([name for name, _, _ in LAYERS])]
 
     fig, ax = plt.subplots(figsize=(7, 7))
