@@ -1,33 +1,36 @@
 """
-Classify every gene into an activity layer.
+Classify genes into the two activity layers, graded by RNA-seq support.
 
-Each gene is assigned by a triage between the three UC-specific contrasts:
-inflamed vs uninflamed (direct), inflamed vs controls, and uninflamed vs
-controls. A gene has to be significant in inflamed vs controls to be classified
-at all; which of the other two contrasts it is also significant in then says
-whether the change is already present without inflammation, and whether
-inflammation adds anything to it.
+Each gene is judged on the three UC contrasts:
 
-  inflammation-amplified  significant in all three contrasts: present in
-                          uninflamed tissue, and further changed when inflamed
-  inflammation-dependent  not significant in uninflamed vs controls: only
-                          present when inflammation is active
-  constitutive            not significant in inflamed vs uninflamed: present in
-                          uninflamed tissue, and no further change when inflamed
-  undetermined            significant in at least one contrast, but in a
-                          combination that places it in none of the layers
-  not significant         significant in none of the three contrasts
+  A  inflamed UC vs controls
+  B  uninflamed UC vs controls
+  C  inflamed vs uninflamed UC (the direct contrast)
 
-Significance is the criterion used throughout the paper: q < 0.05, direction
-consistency >= 0.8, and presence in at least half of the datasets contributing
-to that contrast.
+and carries two independent properties, each a positive claim:
 
-The pooled effect additionally has to carry the same sign in every contrast in
-which the gene is significant. This is a condition between contrasts; agreement
-between the datasets within a contrast is already covered by the direction
-consistency in the significance criterion above. The remaining contrast is, for
-each layer, the one the gene was not shown to differ in, so its sign carries no
-information and is not required to agree.
+  constitutive            significant in A and in B, same direction: the change
+                          is already present before inflammation is
+  inflammation-dependent  significant in A and in C, same direction:
+                          inflammation measurably changes the gene
+
+These are not exclusive. A gene present at baseline that inflammation pushes
+further carries both, and is reported as a subset of each rather than as a
+third category. A gene significant in A but carrying neither property is
+unresolved: the data place it in no layer, which is stated rather than assumed
+to mean absence.
+
+C is not an independent axis --- it tracks (g_A - g_B) closely --- but inflamed
+and uninflamed biopsies are paired within datasets, so it measures that axis
+more precisely than the difference of two separate analyses, and it lets
+inflammation dependence be asserted positively instead of inferred from a
+non-significant B.
+
+The RNA-seq cohorts grade each claim rather than filtering it. Requiring
+significance on both platforms would discard a signal that replicates in
+direction but not in significance, since the uninflamed RNA-seq arm has three
+cohorts. Each property is therefore graded on the contrast that defines it:
+B for constitutive, C for inflammation-dependent.
 
 Run:
     python ibd/scripts/S_gene_layers.py
@@ -40,27 +43,48 @@ import os
 import numpy as np
 import pandas as pd
 
-COLUMNS = ['gene', 'hedges_g', 'q_value', 'datasets', 'direction_ratio']
-LAYERS = ['constitutive', 'inflammation-amplified', 'inflammation-dependent',
-          'undetermined', 'not significant']
-CLASSIFIED = LAYERS[:3]
-OUTPUT = ['gene', 'layer', 'direction', 'hedges_g_infl', 'q_value_infl',
-          'hedges_g_uninf', 'q_value_uninf', 'hedges_g_direct', 'q_value_direct']
+CONTRASTS = [
+    ('infl', 'uc_vs_hc', 'rnaseq_uc_vs_hc'),
+    ('uninf', 'uninf_vs_hc', 'rnaseq_uninf_vs_hc'),
+    ('direct', 'infl_vs_uninfl', 'rnaseq_infl_vs_uninfl'),
+]
+OUTPUT = ['gene', 'constitutive', 'inflammation_dependent', 'unresolved', 'direction',
+          'support_constitutive', 'support_inflammation_dependent',
+          'hedges_g_infl', 'q_value_infl',
+          'hedges_g_uninf', 'q_value_uninf', 'hedges_g_rna_uninf', 'q_value_rna_uninf',
+          'hedges_g_direct', 'q_value_direct', 'hedges_g_rna_direct', 'q_value_rna_direct']
 
 
-def load(path, suffix):
+def load(results, path, suffix, quiet=False):
     """Meta-analysis results plus a significance flag on the paper's criteria."""
-    table = pd.read_csv(f'{path}/gene_meta_all.csv')[COLUMNS]
+    table = pd.read_csv(f'{results}/{path}/gene_meta_all.csv')[
+        ['gene', 'hedges_g', 'q_value', 'datasets', 'direction_ratio']]
     minimum = math.ceil(table['datasets'].max() / 2)
     table['significant'] = (
         (table['q_value'] < 0.05)
         & (table['direction_ratio'] >= 0.8)
         & (table['datasets'] >= minimum)
     )
-    print(f'  {path}: {int(table["datasets"].max())} cohorts, presence >= {minimum}, '
-          f'{int(table["significant"].sum())} significant')
+    if not quiet:
+        print(f'  {path:22s} {int(table["datasets"].max()):2d} cohorts, presence >= {minimum}, '
+              f'{int(table["significant"].sum()):5d} significant')
 
-    return table.rename(columns={c: f'{c}_{suffix}' for c in COLUMNS[1:] + ['significant']})
+    keep = ['gene', 'hedges_g', 'q_value', 'significant']
+    return table[keep].rename(columns={c: f'{c}_{suffix}' for c in keep[1:]})
+
+
+def grade(genes, holds, contrast):
+    """How well the RNA-seq cohorts support a claim made on the microarray ones."""
+    micro, rna = f'hedges_g_{contrast}', f'hedges_g_rna_{contrast}'
+    same_sign = np.sign(genes[micro]) == np.sign(genes[rna])
+
+    support = pd.Series('', index=genes.index)
+    support[holds] = 'unsupported'
+    support[holds & same_sign] = 'direction-consistent'
+    support[holds & same_sign & genes[f'significant_rna_{contrast}'].fillna(False)] = 'strong'
+    support[holds & genes[rna].isna()] = 'not tested'
+
+    return support
 
 
 def main():
@@ -69,49 +93,55 @@ def main():
     parser.add_argument('--output-dir', default='results/revision_v2')
     args = parser.parse_args()
 
-    print('Loading:')
-    inflamed = load(f'{args.results}/uc_vs_hc', 'infl')
-    uninflamed = load(f'{args.results}/uninf_vs_hc', 'uninf')
-    direct = load(f'{args.results}/infl_vs_uninfl', 'direct')
+    print('Microarray (the discovery cohorts):')
+    genes = None
+    for name, micro, _ in CONTRASTS:
+        part = load(args.results, micro, name)
+        genes = part if genes is None else genes.merge(part, on='gene')
 
-    genes = inflamed.merge(uninflamed, on='gene').merge(direct, on='gene')
+    print('RNA-seq (grading only, never filtering):')
+    for name, _, rna in CONTRASTS:
+        # Left join: a gene missing from the RNA-seq corpus is untested, not refuted.
+        genes = genes.merge(load(args.results, rna, f'rna_{name}'), on='gene', how='left')
 
-    # Everything is judged relative to the inflamed contrast, so a gene that is
-    # not significant there cannot be placed in any layer.
-    altered = genes['significant_infl']
     sign = np.sign(genes['hedges_g_infl'])
-    agrees_uninf = sign == np.sign(genes['hedges_g_uninf'])
-    agrees_direct = sign == np.sign(genes['hedges_g_direct'])
+    genes['constitutive'] = (
+        genes['significant_infl'] & genes['significant_uninf']
+        & (sign == np.sign(genes['hedges_g_uninf'])))
+    genes['inflammation_dependent'] = (
+        genes['significant_infl'] & genes['significant_direct']
+        & (sign == np.sign(genes['hedges_g_direct'])))
+    genes['unresolved'] = (
+        genes['significant_infl']
+        & ~genes['constitutive'] & ~genes['inflammation_dependent'])
 
-    genes['layer'] = 'not significant'
-    genes.loc[
-        altered | genes['significant_uninf'] | genes['significant_direct'],
-        'layer'] = 'undetermined'
-    genes.loc[
-        altered & genes['significant_uninf'] & ~genes['significant_direct'] & agrees_uninf,
-        'layer'] = 'constitutive'
-    genes.loc[
-        altered & genes['significant_uninf'] & genes['significant_direct']
-        & agrees_uninf & agrees_direct,
-        'layer'] = 'inflammation-amplified'
-    genes.loc[
-        altered & ~genes['significant_uninf'] & genes['significant_direct'] & agrees_direct,
-        'layer'] = 'inflammation-dependent'
+    genes['direction'] = pd.Series(np.where(sign > 0, 'up', 'down'), index=genes.index).where(
+        genes['constitutive'] | genes['inflammation_dependent'] | genes['unresolved'])
+    genes['support_constitutive'] = grade(genes, genes['constitutive'], 'uninf')
+    genes['support_inflammation_dependent'] = grade(
+        genes, genes['inflammation_dependent'], 'direct')
 
-    genes['direction'] = pd.Series(np.where(sign > 0, 'up', 'down'),
-                                   index=genes.index).where(genes['layer'].isin(CLASSIFIED))
+    both = genes['constitutive'] & genes['inflammation_dependent']
+    print(f'\nClassification over {len(genes)} genes measured in all three UC contrasts:')
+    print(f'  constitutive            {int(genes["constitutive"].sum()):6d}   '
+          f'of which {int(both.sum())} are also inflammation-dependent')
+    print(f'  inflammation-dependent  {int(genes["inflammation_dependent"].sum()):6d}   '
+          f'of which {int(both.sum())} are also constitutive')
+    print(f'  unresolved              {int(genes["unresolved"].sum()):6d}   '
+          f'altered when inflamed, placed in neither layer')
 
-    print(f'\nClassification over {len(genes)} genes measured in all three contrasts:')
-    for layer in LAYERS:
-        subset = genes[genes['layer'] == layer]
-        counts = subset['direction'].value_counts()
-        split = f'{counts.get("up", 0)} up, {counts.get("down", 0)} down' if layer in CLASSIFIED else ''
-        print(f'  {layer:24s} {len(subset):6d}   {split}')
+    print('\nRNA-seq support:')
+    for label, column in [('constitutive', 'support_constitutive'),
+                          ('inflammation-dependent', 'support_inflammation_dependent')]:
+        counts = genes.loc[genes[column] != '', column].value_counts()
+        detail = ', '.join(f'{counts.get(k, 0)} {k}'
+                           for k in ['strong', 'direction-consistent', 'unsupported', 'not tested'])
+        print(f'  {label:24s} {detail}')
 
-    genes['layer'] = pd.Categorical(genes['layer'], categories=LAYERS, ordered=True)
     genes = genes.sort_values(
-        ['layer', 'hedges_g_infl'], key=lambda c: c.abs() if c.name == 'hedges_g_infl' else c,
-        ascending=[True, False])
+        ['constitutive', 'inflammation_dependent', 'hedges_g_infl'],
+        key=lambda c: c.abs() if c.name == 'hedges_g_infl' else c,
+        ascending=[False, False, False])
 
     os.makedirs(args.output_dir, exist_ok=True)
     genes[OUTPUT].to_csv(f'{args.output_dir}/gene_layers.csv', index=False)

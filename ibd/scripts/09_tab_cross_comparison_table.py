@@ -80,21 +80,22 @@ def _fmt_g(val: float, q: float) -> str:
     return f"{sign}{val:.2f}{stars}"
 
 
-LAYER_LABELS = {
-    "constitutive": "Constit",
-    "inflammation-amplified": "Amplified",
-    "inflammation-dependent": "Infl-dep",
-    "undetermined": "Undet",
-    "not significant": "NS",
-}
+TICK = r"$\bullet$"
 
 
-def _classify(gene: str, layers) -> str:
-    """Layer assigned by S_gene_layers.py, from the three-contrast triage."""
+def _layers(gene: str, layers):
+    """The two properties from S_gene_layers.py; a gene may carry both.
+
+    Returned as a pair of cells so that the overlap reads as a subset of each
+    layer rather than as a category of its own.
+    """
     if gene not in layers.index:
-        return "---"
+        return "---", "---"
 
-    return LAYER_LABELS.get(layers.loc[gene, "layer"], "---")
+    row = layers.loc[gene]
+
+    return (TICK if row["constitutive"] else "",
+            TICK if row["inflammation_dependent"] else "")
 
 
 def main():
@@ -130,7 +131,7 @@ def main():
                     r[f"g_{label}"] = np.nan
                     r[f"q_{label}"] = np.nan
 
-            r["class"] = _classify(gene, layers)
+            r["constit"], r["infldep"] = _layers(gene, layers)
             rows.append(r)
 
     # ── build LaTeX ───────────────────────────────────────────────────────
@@ -139,18 +140,18 @@ def main():
     lines.append(r"\centering")
     lines.append(r"\scriptsize")
     lines.append(r"\renewcommand{\arraystretch}{1.10}")
-    lines.append(r"\begin{tabular}{l rrrrr l}")
+    lines.append(r"\begin{tabular}{l rrrrr cc}")
     lines.append(r"\toprule")
     lines.append(r"Gene & $g_\mathrm{UC\,infl}$ & $g_\mathrm{UC\,uninfl}$"
                  r" & $g_\mathrm{infl\,vs\,uninfl}$"
                  r" & $g_\mathrm{CD}$ & $g_\mathrm{UC\,vs\,CD}$"
-                 r" & Classification \\")
+                 r" & Constit & Infl-dep \\")
     lines.append(r"\midrule")
 
     for r in rows:
         if "_group" in r:
             lines.append(r"\midrule")
-            lines.append(r"\multicolumn{7}{l}{\textit{"
+            lines.append(r"\multicolumn{8}{l}{\textit{"
                          + r["_group"] + r"}} \\")
             continue
 
@@ -160,9 +161,9 @@ def main():
         g_direct = _fmt_g(r["g_direct"], r["q_direct"])
         g_cd = _fmt_g(r["g_cd"], r["q_cd"])
         g_uccd = _fmt_g(r["g_uccd"], r["q_uccd"])
-        cl = r["class"]
+        constit, infldep = r["constit"], r["infldep"]
         lines.append(f"  {gene_tex} & {g_uc} & {g_un} & {g_direct} & {g_cd}"
-                      f" & {g_uccd} & {cl} \\\\")
+                      f" & {g_uccd} & {constit} & {infldep} \\\\")
 
     lines.append(r"\bottomrule")
     lines.append(r"\end{tabular}")
@@ -171,15 +172,13 @@ def main():
         r" discussed in the text. Each column shows the meta-analytic"
         r" Hedges'~$g$ from one of the five analyses; significance is indicated"
         r" by stars ($^{*}q < 0.05$, $^{**}q < 0.01$, $^{***}q < 0.001$)."
-        r" Classification triages the three UC contrasts:"
-        r" Constit = constitutive (altered in both inflamed and uninflamed UC,"
-        r" with no further change when inflamed); Amplified ="
-        r" inflammation-amplified (altered in uninflamed UC and further changed"
-        r" when inflamed); Infl-dep = inflammation-dependent (altered in"
-        r" inflamed UC and differing from uninflamed UC, with no change in"
-        r" uninflamed UC); Undet = undetermined (significant in at least one"
-        r" contrast, but in a combination that places it in none of the"
-        r" layers); NS = not significant in any contrast."
+        r" The last two columns mark the two activity layers, which are independent"
+        r" properties rather than exclusive categories, so a gene may carry both or"
+        r" neither: Constit = altered already in uninflamed mucosa; Infl-dep ="
+        r" measurably changed by inflammation."
+        r" Stars indicate $q$-values only; the layers additionally require direction"
+        r" consistency $\geq 80\%$ and presence in at least half the contributing"
+        r" cohorts, so a starred effect may still be unclassified."
         r" The UC\,vs\,CD column shows"
         r" the direct comparison (positive = higher in UC).}"
     )

@@ -1,16 +1,15 @@
 """
-Scatter plot of the two activity layers present in uninflamed mucosa.
+Scatter plot of the constitutive layer, graded by RNA-seq support.
 
-Each point is a protein-coding gene assigned by the activity-layer triage
-(S_gene_layers.py); non-coding symbols are excluded from the plot entirely.
-Both layers are altered in uninflamed UC; they differ in whether the direct
-inflamed-versus-uninflamed contrast finds a further change. Vertical distance
-below the y = x diagonal is how much inflammation adds.
+Each point is a protein-coding constitutive gene from S_gene_layers.py: altered
+against controls both when inflamed and when uninflamed, in the same direction.
+Non-coding symbols are excluded from the plot entirely.
 
-The constitutive layer is defined by the absence of a significant further
-change, not by numerical equality of the two effects, so these genes scatter
-below the diagonal rather than sitting on it: the direct contrast is drawn from
-six cohorts and is underpowered to resolve differences of this size.
+Distance below the y = x diagonal is how much larger the effect is once
+inflammation is present, so the genes furthest below it are those that also
+carry the inflammation-dependent property. Colour grades how well the
+independent RNA-seq cohorts support the uninflamed effect --- the claim that
+makes a gene constitutive, and the weakest link in the analysis.
 
 Usage:
     python ibd/scripts/06_fig_scatter_comparison.py \
@@ -26,9 +25,13 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from adjustText import adjust_text
 
-LAYERS = [
-    ("inflammation-amplified", "#d6604d", "Inflammation-amplified"),
-    ("constitutive", "#2166ac", "Constitutive"),
+# Graded by how well the RNA-seq cohorts support the uninflamed effect, which is
+# the contrast that makes a gene constitutive.
+SUPPORT = [
+    ("strong", "#2166ac", "Replicated in RNA-seq"),
+    ("direction-consistent", "#92c5de", "Same direction, not significant"),
+    ("unsupported", "#d6604d", "Not supported"),
+    ("not tested", "#bdbdbd", "Not tested in RNA-seq"),
 ]
 
 
@@ -59,25 +62,35 @@ def main():
                         help="gene_layers.csv from S_gene_layers.py")
     parser.add_argument("--output", default="figures/scatter_comparison.pdf")
     parser.add_argument("--dpi", type=int, default=300)
+    parser.add_argument("--labels", type=int, default=10,
+                        help="how many of the largest effects to name, on top of the "
+                             "genes the RNA-seq cohorts settle either way")
     parser.add_argument("--hgnc", default=None,
                         help="Path to HGNC TSV; if omitted, downloads from genenames.org")
     args = parser.parse_args()
 
     genes = pd.read_csv(args.input)
     genes = genes[genes.gene.isin(get_protein_coding_genes(args.hgnc))]
-    shown = genes[genes.layer.isin([name for name, _, _ in LAYERS])]
+    shown = genes[genes.constitutive]
 
     fig, ax = plt.subplots(figsize=(7, 7))
 
-    for name, colour, label in LAYERS:
-        sub = shown[shown.layer == name]
+    for name, colour, label in SUPPORT:
+        sub = shown[shown.support_constitutive == name]
+        if sub.empty:
+            continue
         ax.scatter(sub.hedges_g_infl, sub.hedges_g_uninf,
                    s=55, alpha=0.85, c=colour, edgecolors="k", linewidths=0.4,
                    zorder=3, label=f"{label} ($n = {len(sub)}$)")
 
-    # The constitutive layer is the one the text discusses gene by gene.
-    texts = [ax.text(r.hedges_g_infl, r.hedges_g_uninf, r.gene, fontsize=8, color="k", fontweight="medium", zorder=5)
-             for r in shown[shown.layer == "constitutive"].itertuples()]
+    # Labelling all of them is unreadable, so name the genes a reader can act on:
+    # those the RNA-seq cohorts settle either way, plus the largest effects.
+    settled = shown[shown.support_constitutive.isin(["strong", "unsupported"])]
+    largest = shown.reindex(shown.hedges_g_uninf.abs().sort_values(ascending=False).index)
+    labelled = pd.concat([settled, largest.head(args.labels)]).drop_duplicates("gene")
+    texts = [ax.text(r.hedges_g_infl, r.hedges_g_uninf, r.gene, fontsize=8, color="k",
+                     fontweight="medium", zorder=5)
+             for r in labelled.itertuples()]
     adjust_text(
         texts, ax=ax,
         x=shown.hedges_g_infl.values, y=shown.hedges_g_uninf.values,

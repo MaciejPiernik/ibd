@@ -403,7 +403,7 @@ def get_protein_coding_genes(path: str | None = None) -> set[str]:
 
 
 def generate_scatter_comparison(layers, fig_dir, hgnc=None):
-    """Scatter of the two activity layers present in uninflamed mucosa.
+    """Scatter of the constitutive layer, graded by RNA-seq support.
 
     Restricted to protein-coding genes, so that the figure and the gene-level
     tables in the main text describe the same set.
@@ -411,13 +411,17 @@ def generate_scatter_comparison(layers, fig_dir, hgnc=None):
     print("Generating scatter comparison plot...")
 
     layers = layers[layers.gene.isin(get_protein_coding_genes(hgnc))]
-    styles = [("constitutive", "#2166ac", "Constitutive"),
-              ("inflammation-amplified", "#d6604d", "Inflammation-amplified")]
-    shown = layers[layers.layer.isin([name for name, _, _ in styles])]
+    styles = [("strong", "#2166ac", "Replicated in RNA-seq"),
+              ("direction-consistent", "#92c5de", "Same direction, not significant"),
+              ("unsupported", "#d6604d", "Not supported"),
+              ("not tested", "#bdbdbd", "Not tested in RNA-seq")]
+    shown = layers[layers.constitutive]
 
     fig, ax = plt.subplots(figsize=(7, 7))
     for name, colour, label in styles:
-        sub = shown[shown.layer == name]
+        sub = shown[shown.support_constitutive == name]
+        if sub.empty:
+            continue
         ax.scatter(sub.hedges_g_infl, sub.hedges_g_uninf,
                    s=55, alpha=0.85, c=colour, edgecolors="k", linewidths=0.4,
                    zorder=3, label=f"{label} ($n = {len(sub)}$)")
@@ -426,7 +430,11 @@ def generate_scatter_comparison(layers, fig_dir, hgnc=None):
         from adjustText import adjust_text
         texts = [ax.text(r.hedges_g_infl, r.hedges_g_uninf, r.gene,
                          fontsize=8, color="k", fontweight="medium", zorder=5)
-                 for r in shown[shown.layer == "constitutive"].itertuples()]
+                 for r in pd.concat([
+                     shown[shown.support_constitutive.isin(["strong", "unsupported"])],
+                     shown.reindex(shown.hedges_g_uninf.abs()
+                                   .sort_values(ascending=False).index).head(10),
+                 ]).drop_duplicates("gene").itertuples()]
         adjust_text(
             texts, ax=ax,
             x=shown.hedges_g_infl.values, y=shown.hedges_g_uninf.values,
@@ -767,6 +775,24 @@ def generate_csv_tables(data_dir, output_dir):
         df.to_csv(out, index=False, float_format="%.6g")
         print(f"  → {out} ({len(df)} rows — {desc})")
 
+    # Table S26: the inflammation-dependent layer, too large to print
+    src = f"{data_dir}/gene_layers.csv"
+    if os.path.exists(src):
+        layers = load_csv(src)
+        dependent = layers[layers.inflammation_dependent]
+        cols = [c for c in ["gene", "direction", "constitutive",
+                            "support_inflammation_dependent",
+                            "hedges_g_infl", "q_value_infl",
+                            "hedges_g_direct", "q_value_direct",
+                            "hedges_g_rna_direct", "q_value_rna_direct"]
+                if c in dependent.columns]
+        out = f"{output_dir}/Table_S26_inflammation_dependent_genes.csv"
+        dependent[cols].to_csv(out, index=False, float_format="%.6g")
+        print(f"  \u2192 {out} ({len(dependent)} genes)")
+    else:
+        print(f"  ! skipped Table S26: {src} not found "
+              f"(run ibd/scripts/S_gene_layers.py)")
+
     # Table S19: every leave-one-dataset-out fold, from S_leave_one_out.py
     src = f"{data_dir}/leave_one_out.csv"
     if os.path.exists(src):
@@ -826,23 +852,27 @@ def cluster_table_latex(data_dir, subdir, comparison_label):
     return "\n".join(lines)
 
 
-def layer_table_latex(layers, layer, direction=None):
-    """Genes assigned to one activity layer by S_gene_layers.py."""
-    sub = layers[layers.layer == layer]
-    if direction is not None:
-        sub = sub[sub.direction == direction]
+TICK = r"$\bullet$"
+SUPPORT_MARK = {"strong": r"$\bullet\bullet$", "direction-consistent": r"$\bullet$",
+                "unsupported": r"$\circ$", "not tested": "---"}
+
+
+def constitutive_table_latex(layers, direction):
+    """The constitutive layer from S_gene_layers.py, graded by RNA-seq support."""
+    sub = layers[layers.constitutive & (layers.direction == direction)]
     sub = sub.reindex(sub.hedges_g_uninf.abs().sort_values(ascending=False).index)
 
-    lines = [r"\begin{tabular}{lrrrr}", r"\toprule",
+    lines = [r"\begin{tabular}{lrrrcc}", r"\toprule",
              r"Gene & $g_{\mathrm{infl}}$ & $g_{\mathrm{uninfl}}$ & "
-             r"$g_{\Delta}$ & $q_{\Delta}$ \\",
+             r"$g_{\Delta}$ & RNA-seq & Infl-dep \\",
              r"\midrule"]
 
     for r in sub.itertuples():
         lines.append(
             f"  {escape_latex(r.gene)} & ${r.hedges_g_infl:+.2f}$ & "
             f"${r.hedges_g_uninf:+.2f}$ & ${r.hedges_g_direct:+.2f}$ & "
-            f"${r.q_value_direct:.3f}$ \\\\")
+            f"{SUPPORT_MARK.get(r.support_constitutive, '---')} & "
+            f"{TICK if r.inflammation_dependent else ''} \\\\")
 
     lines += [r"\bottomrule", r"\end{tabular}"]
     return "\n".join(lines)
@@ -855,12 +885,12 @@ def build_supplementary_latex(fig_dir, output_dir, data_dir,
 
     # Pathway cluster tables for all 4 comparisons
     layers = load_csv(f"{data_dir}/gene_layers.csv")
-    const_up_table = layer_table_latex(layers, "constitutive", "up")
-    const_down_table = layer_table_latex(layers, "constitutive", "down")
-    amplified_table = layer_table_latex(layers, "inflammation-amplified")
-    const_up = layers[(layers.layer == "constitutive") & (layers.direction == "up")]
-    const_down = layers[(layers.layer == "constitutive") & (layers.direction == "down")]
-    n_amplified = int((layers.layer == "inflammation-amplified").sum())
+    const_up_table = constitutive_table_latex(layers, "up")
+    const_down_table = constitutive_table_latex(layers, "down")
+    const_up = layers[layers.constitutive & (layers.direction == "up")]
+    const_down = layers[layers.constitutive & (layers.direction == "down")]
+    n_both = int((layers.constitutive & layers.inflammation_dependent).sum())
+    n_dependent = int(layers.inflammation_dependent.sum())
 
     uc_cluster_table = cluster_table_latex(data_dir, "uc_vs_hc", "UC inflamed vs HC")
     uninfl_cluster_table = cluster_table_latex(data_dir, "uninf_vs_hc", "Uninflamed UC vs HC")
@@ -1090,15 +1120,21 @@ negative NES = downregulated in UC relative to CD.}
 % ── Activity-layer gene tables ──
 \subsection*{Constitutive genes}
 
-Genes significant against controls both when inflamed and when uninflamed, and
-not significantly different between the two states, by the activity-layer triage
-across the three UC contrasts. $g_{\Delta}$ is the effect size of the direct
-inflamed versus uninflamed contrast, in which these genes do not differ.
+Genes altered against controls both when inflamed and when uninflamed, in the
+same direction: the change is already present before inflammation is.
+$g_{\Delta}$ is the effect size of the direct inflamed versus uninflamed
+contrast, shown for reference. The RNA-seq column grades how well the
+independent cohorts support the uninflamed effect, the claim on which this layer
+rests: $\bullet\bullet$ significant in the same direction, $\bullet$ same
+direction but not significant, $\circ$ not supported, --- not tested. The final
+column marks the genes that are additionally inflammation-dependent; being
+altered before inflammation and being changed further by it are independent
+properties, so a gene may carry both.
 
 \begin{table}[H]
 \centering
 \scriptsize
-\caption{Constitutive genes (""" + str(len(const_up) + len(const_down)) + r""" genes: """ + str(len(const_up)) + r""" upregulated, """ + str(len(const_down)) + r""" downregulated).}
+\caption{Constitutive genes (""" + str(len(const_up) + len(const_down)) + r""" genes: """ + str(len(const_up)) + r""" upregulated, """ + str(len(const_down)) + r""" downregulated; """ + str(n_both) + r""" are also inflammation-dependent).}
 \label{tab:constitutive}
 """ + const_up_table + r"""
 
@@ -1108,19 +1144,12 @@ inflamed versus uninflamed contrast, in which these genes do not differ.
 \end{table}
 \clearpage
 
-\subsection*{Inflammation-amplified genes}
+\subsection*{Inflammation-dependent genes}
 
-Genes significant in all three UC contrasts: already altered in uninflamed
-mucosa, and further changed when inflammation is present.
-
-\begin{table}[H]
-\centering
-\scriptsize
-\caption{Inflammation-amplified genes (""" + str(n_amplified) + r""" genes).
-$g_{\Delta}$ is the effect size of the direct inflamed versus uninflamed contrast.}
-\label{tab:amplified}
-""" + amplified_table + r"""
-\end{table}
+Genes altered when inflamed and differing between inflamed and uninflamed
+mucosa, in the same direction: inflammation measurably changes them. There are
+""" + f"{n_dependent:,}".replace(",", "{,}") + r""" such genes, too many to print, so they are provided as
+\textbf{Table~S26} together with their RNA-seq support.
 """ + leave_one_out_section(data_dir) + rnaseq_validation_section(data_dir) + r"""
 \end{document}
 """

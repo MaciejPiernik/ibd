@@ -146,16 +146,10 @@ These scripts process results from all five microarray comparisons (in
 ### Step 4: Cross-comparison analysis
 
 ```bash
-# Inflamed vs uninflamed effect size comparison (Wald test, constitutive/inflammation-dependent classification)
-python ibd/scripts/S_effect_size_comparison.py \
-    --inflamed results/revision_v2/uc_vs_hc/gene_meta_all.csv \
-    --uninflamed results/revision_v2/uninf_vs_hc/gene_meta_all.csv \
-    --output-dir results/revision_v2/
-
 # Compare significant pathways between inflamed and uninflamed analyses
 python ibd/scripts/S_compare_pathways.py
 
-# Classify genes into activity layers by triage between the three UC contrasts
+# Classify genes as constitutive and/or inflammation-dependent, graded by RNA-seq
 python ibd/scripts/S_gene_layers.py
 ```
 
@@ -177,6 +171,11 @@ python ibd/scripts/02_tab_pipeline_summary.py                  # Pipeline summar
 python ibd/scripts/04_tab_top_genes.py                         # Top up/downregulated genes
 python ibd/scripts/05_tab_pathway_clusters.py                  # Pathway cluster tables
 python ibd/scripts/09_tab_cross_comparison_table.py            # Cross-comparison gene table
+
+# Sensitivity and validation analyses quoted in the text
+python ibd/scripts/S_leave_one_out.py                          # leave-one-dataset-out (Table S18)
+python ibd/scripts/_check_ranking_correlation.py               # REML vs RRA rank correlation
+python ibd/scripts/_check_manuscript_numbers.py                # cross-check quoted numbers
 
 # Supplementary
 python ibd/scripts/S_generate_supplementary.py --data-dir results/revision_v2/  # Full supplementary PDF + CSV tables
