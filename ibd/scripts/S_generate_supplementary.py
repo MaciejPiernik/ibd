@@ -411,8 +411,9 @@ def generate_scatter_comparison(layers, fig_dir, hgnc=None):
     print("Generating scatter comparison plot...")
 
     layers = layers[layers.gene.isin(get_protein_coding_genes(hgnc))]
-    styles = [("strong", "#2166ac", "Replicated in RNA-seq"),
-              ("direction-consistent", "#92c5de", "Same direction, not significant"),
+    styles = [("strong", "#2166ac", "Both contrasts replicated"),
+              ("partial", "#67a9cf", "One contrast replicated"),
+              ("direction-consistent", "#d1e5f0", "Same direction, neither significant"),
               ("unsupported", "#d6604d", "Not supported"),
               ("not tested", "#bdbdbd", "Not tested in RNA-seq")]
     shown = layers[layers.constitutive]
@@ -853,8 +854,9 @@ def cluster_table_latex(data_dir, subdir, comparison_label):
 
 
 TICK = r"$\bullet$"
-SUPPORT_MARK = {"strong": r"$\bullet\bullet$", "direction-consistent": r"$\bullet$",
-                "unsupported": r"$\circ$", "not tested": "---"}
+SUPPORT_MARK = {"strong": r"$\bullet\bullet$", "partial": r"$\bullet$",
+                "direction-consistent": r"$\circ$", "unsupported": r"$\times$",
+                "not tested": "---"}
 
 
 def constitutive_table_latex(layers, direction):
@@ -1125,8 +1127,9 @@ same direction: the change is already present before inflammation is.
 $g_{\Delta}$ is the effect size of the direct inflamed versus uninflamed
 contrast, shown for reference. The RNA-seq column grades how well the
 independent cohorts support the uninflamed effect, the claim on which this layer
-rests: $\bullet\bullet$ significant in the same direction, $\bullet$ same
-direction but not significant, $\circ$ not supported, --- not tested. The final
+rests, across both contrasts that define the layer:
+$\bullet\bullet$ both replicated, $\bullet$ one replicated, $\circ$ same direction
+but neither significant, $\times$ not supported, --- not tested. The final
 column marks the genes that are additionally inflammation-dependent; being
 altered before inflammation and being changed further by it are independent
 properties, so a gene may carry both.
@@ -1185,7 +1188,7 @@ def leave_one_out_section(data_dir):
             f"{group.significant.min():,}--{group.significant.max():,} & "
             f"{100 * group.retained.min():.0f}--{100 * group.retained.max():.0f}\\% & "
             f"{group.correlation.min():.3f} & "
-            f"{100 * w.random_effects.max():.0f}\\% & {100 * w.fixed_effect.max():.0f}\\% \\\\")
+            f"{100 * w.weight_share.max():.0f}\\% \\\\")
 
     fold_note = ""
     if len(folds):
@@ -1208,20 +1211,19 @@ presence threshold set to 50\% of the remaining cohorts.
 
 Retained is the percentage of the genes significant in the full analysis that
 remain significant when a cohort is omitted, taken across all folds. $r$ is the
-smallest correlation between fold and full effect sizes. The last two columns
-give the largest share of the pooled weight carried by any single cohort, under
-the random-effects weights used here and under fixed-effect weights.
+smallest correlation between fold and full effect sizes, taken over every gene
+the fold estimates rather than only those it still calls significant. The last
+column gives the largest share of the pooled weight carried by any single
+cohort.
 
 \begin{table}[H]
 \centering
 \small
 \caption{Leave-one-dataset-out results for each meta-analysis.}
 \label{tab:leave_one_out}
-\begin{tabular}{lrrrrrr}
+\begin{tabular}{lrrrrr}
 \toprule
- & & Significant & & & \multicolumn{2}{c}{Largest cohort weight} \\
-\cmidrule(l){6-7}
-Analysis & Cohorts & genes & Retained & min $r$ & random & fixed \\
+Analysis & Cohorts & Significant genes & Retained & min $r$ & Largest cohort weight \\
 \midrule
 """ + "\n".join(rows) + r"""
 \bottomrule

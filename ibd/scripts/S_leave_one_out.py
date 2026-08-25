@@ -7,11 +7,10 @@ asked for the analysis to be repeated with the largest datasets left out.
 
 Two things are reported for every analysis:
 
-  - how much of the pooled weight each cohort actually carries, under the
-    random-effects weights used here and under fixed-effect weights for
-    comparison. A large between-study variance pulls random-effects weights
-    towards equality, so the concern applies far less than it would to a
-    fixed-effect model.
+  - how much of the pooled weight each cohort actually carries under the
+    random-effects model used throughout. A large between-study variance pulls
+    those weights towards equality, so the concern applies far less than it
+    would to a fixed-effect model.
 
   - the result of repeating the meta-analysis with each cohort omitted in turn:
     how many genes and pathways stay significant, how much of the full list is
@@ -38,16 +37,11 @@ ANALYSES = ['uc_vs_hc', 'uninf_vs_hc', 'infl_vs_uninfl', 'cd_vs_hc', 'uc_vs_cd']
 
 
 def weight_shares(per_dataset, tau2):
-    """Share of the pooled weight carried by each cohort, per weighting scheme."""
+    """Share of the pooled weight carried by each cohort, under the model used."""
     variance = per_dataset.pivot(index='gene', columns='dataset', values='hedges_g_var')
+    weight = 1 / variance.add(tau2, axis=0)
 
-    random = 1 / variance.add(tau2, axis=0)
-    fixed = 1 / variance
-
-    return pd.DataFrame({
-        'random_effects': (random.div(random.sum(axis=1), axis=0)).mean(),
-        'fixed_effect': (fixed.div(fixed.sum(axis=1), axis=0)).mean(),
-    })
+    return pd.DataFrame({'weight_share': (weight.div(weight.sum(axis=1), axis=0)).mean()})
 
 
 def run(name, results_dir):
@@ -62,26 +56,30 @@ def run(name, results_dir):
     print(f'\n===== {name}: {len(cohorts)} cohorts, {len(full_significant)} significant genes =====')
 
     shares = weight_shares(per_dataset, full_meta.set_index('gene')['tau2'])
-    print('weight carried by each cohort (random-effects / fixed-effect):')
-    for cohort, row in shares.sort_values('random_effects', ascending=False).iterrows():
-        print(f'  {cohort:11s} {row.random_effects:5.1%} / {row.fixed_effect:5.1%}')
+    print('weight carried by each cohort:')
+    for cohort, row in shares.sort_values('weight_share', ascending=False).iterrows():
+        print(f'  {cohort:11s} {row.weight_share:5.1%}')
 
     rows = []
     for dropped in cohorts:
         kept = per_dataset[per_dataset['dataset'] != dropped]
         config = build_config(data_dir='./db', output_dir='/tmp/loo',
                               min_datasets=math.ceil((len(cohorts) - 1) / 2))
-        fold = exp._filter_genes(exp._meta_analyse_genes(kept, config), config)
-        fold_significant = set(fold['gene'])
+        pooled = exp._meta_analyse_genes(kept, config)
+        fold_significant = set(exp._filter_genes(pooled, config)['gene'])
 
-        common = full_effect.index.intersection(fold.set_index('gene').index)
-        correlation = full_effect.loc[common].corr(fold.set_index('gene')['hedges_g'].loc[common])
+        # Over every gene the fold estimates. Restricting to the genes it still
+        # calls significant would select for large effects and inflate the
+        # agreement, since a fold shares all but one cohort with the full analysis.
+        fold_effect = pooled.set_index('gene')['hedges_g']
+        common = full_effect.index.intersection(fold_effect.index)
+        correlation = full_effect.loc[common].corr(fold_effect.loc[common])
         retained = len(full_significant & fold_significant)
 
         rows.append({
             'analysis': name,
             'omitted': dropped,
-            'weight_share': shares.loc[dropped, 'random_effects'],
+            'weight_share': shares.loc[dropped, 'weight_share'],
             'significant': len(fold_significant),
             'retained': retained / len(full_significant) if full_significant else np.nan,
             'correlation': correlation,

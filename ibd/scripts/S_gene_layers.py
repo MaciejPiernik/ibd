@@ -48,9 +48,11 @@ CONTRASTS = [
     ('uninf', 'uninf_vs_hc', 'rnaseq_uninf_vs_hc'),
     ('direct', 'infl_vs_uninfl', 'rnaseq_infl_vs_uninfl'),
 ]
+# Every contrast the grading depends on is carried through, so a support call can
+# be audited from this file alone.
 OUTPUT = ['gene', 'constitutive', 'inflammation_dependent', 'unresolved', 'direction',
           'support_constitutive', 'support_inflammation_dependent',
-          'hedges_g_infl', 'q_value_infl',
+          'hedges_g_infl', 'q_value_infl', 'hedges_g_rna_infl', 'q_value_rna_infl',
           'hedges_g_uninf', 'q_value_uninf', 'hedges_g_rna_uninf', 'q_value_rna_uninf',
           'hedges_g_direct', 'q_value_direct', 'hedges_g_rna_direct', 'q_value_rna_direct']
 
@@ -73,16 +75,33 @@ def load(results, path, suffix, quiet=False):
     return table[keep].rename(columns={c: f'{c}_{suffix}' for c in keep[1:]})
 
 
-def grade(genes, holds, contrast):
-    """How well the RNA-seq cohorts support a claim made on the microarray ones."""
-    micro, rna = f'hedges_g_{contrast}', f'hedges_g_rna_{contrast}'
-    same_sign = np.sign(genes[micro]) == np.sign(genes[rna])
+def grade(genes, holds, contrasts):
+    """How far the RNA-seq cohorts support a claim.
+
+    A layer is defined by a conjunction of contrasts, so the claim is only
+    fully supported when the RNA-seq cohorts confirm every one of them. Grading
+    on the layer-defining contrast alone would call a gene strongly supported
+    while the other half of its definition failed to replicate.
+    """
+    agree, replicated, tested = [], [], []
+    for contrast in contrasts:
+        micro = genes[f'hedges_g_{contrast}']
+        rna = genes[f'hedges_g_rna_{contrast}']
+        same_sign = np.sign(micro) == np.sign(rna)
+        agree.append(same_sign)
+        replicated.append(same_sign & genes[f'significant_rna_{contrast}'].fillna(False))
+        tested.append(rna.notna())
+
+    all_agree = pd.concat(agree, axis=1).all(axis=1)
+    all_tested = pd.concat(tested, axis=1).all(axis=1)
+    n_replicated = pd.concat(replicated, axis=1).sum(axis=1)
 
     support = pd.Series('', index=genes.index)
     support[holds] = 'unsupported'
-    support[holds & same_sign] = 'direction-consistent'
-    support[holds & same_sign & genes[f'significant_rna_{contrast}'].fillna(False)] = 'strong'
-    support[holds & genes[rna].isna()] = 'not tested'
+    support[holds & all_agree] = 'direction-consistent'
+    support[holds & all_agree & (n_replicated > 0)] = 'partial'
+    support[holds & all_agree & (n_replicated == len(contrasts))] = 'strong'
+    support[holds & ~all_tested] = 'not tested'
 
     return support
 
@@ -117,9 +136,11 @@ def main():
 
     genes['direction'] = pd.Series(np.where(sign > 0, 'up', 'down'), index=genes.index).where(
         genes['constitutive'] | genes['inflammation_dependent'] | genes['unresolved'])
-    genes['support_constitutive'] = grade(genes, genes['constitutive'], 'uninf')
+    # Each layer is graded on the whole conjunction that defines it.
+    genes['support_constitutive'] = grade(
+        genes, genes['constitutive'], ['infl', 'uninf'])
     genes['support_inflammation_dependent'] = grade(
-        genes, genes['inflammation_dependent'], 'direct')
+        genes, genes['inflammation_dependent'], ['infl', 'direct'])
 
     both = genes['constitutive'] & genes['inflammation_dependent']
     print(f'\nClassification over {len(genes)} genes measured in all three UC contrasts:')
@@ -135,7 +156,8 @@ def main():
                           ('inflammation-dependent', 'support_inflammation_dependent')]:
         counts = genes.loc[genes[column] != '', column].value_counts()
         detail = ', '.join(f'{counts.get(k, 0)} {k}'
-                           for k in ['strong', 'direction-consistent', 'unsupported', 'not tested'])
+                           for k in ['strong', 'partial', 'direction-consistent',
+                                     'unsupported', 'not tested'])
         print(f'  {label:24s} {detail}')
 
     genes = genes.sort_values(

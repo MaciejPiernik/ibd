@@ -151,6 +151,10 @@ python ibd/scripts/S_compare_pathways.py
 
 # Classify genes as constitutive and/or inflammation-dependent, graded by RNA-seq
 python ibd/scripts/S_gene_layers.py
+
+# Assemble one row per gene and per pathway, across every analysis: the lookup
+# table that the paper's figures and tables are built from
+python ibd/scripts/S_master_tables.py
 ```
 
 ### Step 5: Generate figures and tables

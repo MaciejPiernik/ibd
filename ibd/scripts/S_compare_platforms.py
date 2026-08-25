@@ -1,10 +1,12 @@
 """
 Compare the microarray meta-analysis with the independent RNA-seq validation.
 
-For the inflamed and the uninflamed comparison separately, reports agreement of
-gene-level effect sizes and of pathway-level enrichment scores between the two
-platforms, and the effective number of cohorts contributing to each
-meta-analysis.
+For each of the three UC contrasts separately, reports agreement of gene-level
+effect sizes and of pathway-level enrichment scores between the two platforms,
+and the effective number of cohorts contributing to each meta-analysis. The
+direct inflamed-versus-uninflamed contrast is included because it is what
+defines the inflammation-dependent layer, so its cross-platform agreement is
+what grades that layer's claims.
 
 The effective number of cohorts is 1 / sum(w^2) over the normalised
 random-effects weights. It states how many cohorts a pooled estimate really
@@ -25,8 +27,9 @@ RNA = 'results/revision_v2'
 OUT = 'results/revision_v2/comparison'
 
 COMPARISONS = [
-    ('inflamed', 'uc_vs_hc', 'rnaseq_uc_vs_hc'),
-    ('uninflamed', 'uninf_vs_hc', 'rnaseq_uninf_vs_hc'),
+    ('inflamed', 'uc_vs_hc', 'rnaseq_uc_vs_hc', 'inflamed UC vs controls'),
+    ('uninflamed', 'uninf_vs_hc', 'rnaseq_uninf_vs_hc', 'uninflamed UC vs controls'),
+    ('direct', 'infl_vs_uninfl', 'rnaseq_infl_vs_uninfl', 'inflamed vs uninflamed UC'),
 ]
 
 
@@ -35,7 +38,10 @@ def effective_cohorts(directory):
     summary = pd.read_csv(f'{directory}/dataset_summary.csv')
     tau2 = pd.read_csv(f'{directory}/gene_meta_all.csv')['tau2'].median()
 
-    weight = 1 / (tau2 + 1 / summary['n_uc'] + 1 / summary['n_ctrl'])
+    # Columns 3 and 4 hold the two arms; they are named for the groups compared,
+    # so read them positionally rather than by name.
+    first, second = summary.columns[2], summary.columns[3]
+    weight = 1 / (tau2 + 1 / summary[first] + 1 / summary[second])
     share = weight / weight.sum()
 
     return pd.DataFrame({'dataset': summary['dataset'], 'weight_share': share}), 1 / (share ** 2).sum()
@@ -86,9 +92,9 @@ if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     summaries = []
 
-    for label, micro_name, rna_name in COMPARISONS:
+    for label, micro_name, rna_name, description in COMPARISONS:
         micro_dir, rna_dir = f'{MICRO}/{micro_name}', f'{RNA}/{rna_name}'
-        print(f'\n===== {label.upper()} UC vs controls =====')
+        print(f'\n===== {description} =====')
 
         for platform, directory in [('microarray', micro_dir), ('RNA-seq', rna_dir)]:
             shares, effective = effective_cohorts(directory)

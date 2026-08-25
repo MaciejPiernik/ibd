@@ -28,8 +28,9 @@ from adjustText import adjust_text
 # Graded by how well the RNA-seq cohorts support the uninflamed effect, which is
 # the contrast that makes a gene constitutive.
 SUPPORT = [
-    ("strong", "#2166ac", "Replicated in RNA-seq"),
-    ("direction-consistent", "#92c5de", "Same direction, not significant"),
+    ("strong", "#2166ac", "Both contrasts replicated"),
+    ("partial", "#67a9cf", "One contrast replicated"),
+    ("direction-consistent", "#d1e5f0", "Same direction, neither significant"),
     ("unsupported", "#d6604d", "Not supported"),
     ("not tested", "#bdbdbd", "Not tested in RNA-seq"),
 ]

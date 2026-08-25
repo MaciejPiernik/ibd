@@ -56,17 +56,11 @@ GENE_GROUPS = {
 }
 
 
-def _load_gene_all(directory: str) -> pd.DataFrame:
-    """Load gene_meta_all.csv, handling the space-in-filename issue."""
-    for candidate in ["gene_meta_all.csv", " gene_meta_all.csv"]:
-        path = os.path.join(directory, candidate)
-        if os.path.exists(path):
-            return pd.read_csv(path)
-    raise FileNotFoundError(f"gene_meta_all.csv not found in {directory}")
+VALIDATED = r"$^{\dagger}$"
 
 
-def _fmt_g(val: float, q: float) -> str:
-    """Format effect size with significance stars."""
+def _fmt_g(val: float, q: float, replicated: bool = False) -> str:
+    """Effect size with significance stars, daggered where RNA-seq agrees."""
     if np.isnan(val):
         return "---"
     stars = ""
@@ -77,7 +71,7 @@ def _fmt_g(val: float, q: float) -> str:
     elif q < 0.05:
         stars = "*"
     sign = "+" if val > 0 else ""
-    return f"{sign}{val:.2f}{stars}"
+    return f"{sign}{val:.2f}{stars}{VALIDATED if replicated else ''}"
 
 
 TICK = r"$\bullet$"
@@ -100,38 +94,34 @@ def _layers(gene: str, layers):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--uc-dir", default="results/revision_v2/uc_vs_hc")
-    ap.add_argument("--uninf-dir", default="results/revision_v2/uninf_vs_hc")
-    ap.add_argument("--cd-dir", default="results/revision_v2/cd_vs_hc")
-    ap.add_argument("--uccd-dir", default="results/revision_v2/uc_vs_cd")
-    ap.add_argument("--direct-dir", default="results/revision_v2/infl_vs_uninfl")
-    ap.add_argument("--layers", default="results/revision_v2/gene_layers.csv")
+    ap.add_argument("--master", default="results/revision_v2/gene_master.csv",
+                    help="gene_master.csv from S_master_tables.py")
     ap.add_argument("--output", default="results/revision_v2/cross_comparison_table.tex")
     args = ap.parse_args()
 
-    uc = _load_gene_all(args.uc_dir).set_index("gene")
-    uninf = _load_gene_all(args.uninf_dir).set_index("gene")
-    cd = _load_gene_all(args.cd_dir).set_index("gene")
-    uccd = _load_gene_all(args.uccd_dir).set_index("gene")
-    direct = _load_gene_all(args.direct_dir).set_index("gene")
-    layers = pd.read_csv(args.layers).set_index("gene")
+    # direction and support are text columns with gaps, so read without chunk inference
+    master = pd.read_csv(args.master, low_memory=False).set_index("gene")
+
+    # Only the three UC contrasts have an RNA-seq counterpart to validate against.
+    columns = [("uc", "infl", "infl"), ("uninf", "uninf", "uninf"),
+               ("direct", "direct", "direct"), ("cd", "cd", None), ("uccd", "uccd", None)]
 
     rows = []
     for group_name, genes in GENE_GROUPS.items():
         rows.append({"_group": group_name})
         for gene in genes:
             r = {"gene": gene}
-            for label, df in [("uc", uc), ("uninf", uninf), ("direct", direct),
-                              ("cd", cd), ("uccd", uccd)]:
-                if gene in df.index:
-                    row = df.loc[gene]
-                    r[f"g_{label}"] = row["hedges_g"]
-                    r[f"q_{label}"] = row["q_value"]
-                else:
-                    r[f"g_{label}"] = np.nan
-                    r[f"q_{label}"] = np.nan
+            row = master.loc[gene] if gene in master.index else None
+            for label, suffix, validated in columns:
+                if row is None:
+                    r[f"g_{label}"], r[f"q_{label}"] = np.nan, np.nan
+                    r[f"v_{label}"] = False
+                    continue
+                r[f"g_{label}"] = row[f"hedges_g_{suffix}"]
+                r[f"q_{label}"] = row[f"q_value_{suffix}"]
+                r[f"v_{label}"] = bool(row[f"replicated_{validated}"]) if validated else False
 
-            r["constit"], r["infldep"] = _layers(gene, layers)
+            r["constit"], r["infldep"] = _layers(gene, master)
             rows.append(r)
 
     # ── build LaTeX ───────────────────────────────────────────────────────
@@ -156,9 +146,9 @@ def main():
             continue
 
         gene_tex = r["gene"].replace("_", r"\_")
-        g_uc = _fmt_g(r["g_uc"], r["q_uc"])
-        g_un = _fmt_g(r["g_uninf"], r["q_uninf"])
-        g_direct = _fmt_g(r["g_direct"], r["q_direct"])
+        g_uc = _fmt_g(r["g_uc"], r["q_uc"], r["v_uc"])
+        g_un = _fmt_g(r["g_uninf"], r["q_uninf"], r["v_uninf"])
+        g_direct = _fmt_g(r["g_direct"], r["q_direct"], r["v_direct"])
         g_cd = _fmt_g(r["g_cd"], r["q_cd"])
         g_uccd = _fmt_g(r["g_uccd"], r["q_uccd"])
         constit, infldep = r["constit"], r["infldep"]
@@ -176,6 +166,9 @@ def main():
         r" properties rather than exclusive categories, so a gene may carry both or"
         r" neither: Constit = altered already in uninflamed mucosa; Infl-dep ="
         r" measurably changed by inflammation."
+        r" A dagger marks an effect the independent RNA-seq cohorts confirm --- significant"
+        r" there in the same direction; only the three UC contrasts have an RNA-seq"
+        r" counterpart, so the CD and UC\,vs\,CD columns carry no dagger."
         r" Stars indicate $q$-values only; the layers additionally require direction"
         r" consistency $\geq 80\%$ and presence in at least half the contributing"
         r" cohorts, so a starred effect may still be unclassified."
