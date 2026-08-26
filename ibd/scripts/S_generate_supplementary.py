@@ -776,7 +776,7 @@ def generate_csv_tables(data_dir, output_dir):
         df.to_csv(out, index=False, float_format="%.6g")
         print(f"  → {out} ({len(df)} rows — {desc})")
 
-    # Table S26: the inflammation-dependent layer, too large to print
+    # Table S17: the inflammation-dependent layer, too large to print
     src = f"{data_dir}/gene_layers.csv"
     if os.path.exists(src):
         layers = load_csv(src)
@@ -787,11 +787,11 @@ def generate_csv_tables(data_dir, output_dir):
                             "hedges_g_direct", "q_value_direct",
                             "hedges_g_rna_direct", "q_value_rna_direct"]
                 if c in dependent.columns]
-        out = f"{output_dir}/Table_S26_inflammation_dependent_genes.csv"
+        out = f"{output_dir}/Table_S17_inflammation_dependent_genes.csv"
         dependent[cols].to_csv(out, index=False, float_format="%.6g")
         print(f"  \u2192 {out} ({len(dependent)} genes)")
     else:
-        print(f"  ! skipped Table S26: {src} not found "
+        print(f"  ! skipped Table S17: {src} not found "
               f"(run ibd/scripts/S_gene_layers.py)")
 
     # Table S19: every leave-one-dataset-out fold, from S_leave_one_out.py
@@ -1152,7 +1152,7 @@ properties, so a gene may carry both.
 Genes altered when inflamed and differing between inflamed and uninflamed
 mucosa, in the same direction: inflammation measurably changes them. There are
 """ + f"{n_dependent:,}".replace(",", "{,}") + r""" such genes, too many to print, so they are provided as
-\textbf{Table~S26} together with their RNA-seq support.
+\textbf{Table~S17} together with their RNA-seq support.
 """ + leave_one_out_section(data_dir) + rnaseq_validation_section(data_dir) + r"""
 \end{document}
 """
@@ -1165,7 +1165,7 @@ mucosa, in the same direction: inflammation measurably changes them. There are
 
 
 def leave_one_out_section(data_dir):
-    """Table S15, from the leave-one-dataset-out sensitivity analysis."""
+    """Table S18, from the leave-one-dataset-out sensitivity analysis."""
     path = f"{data_dir}/leave_one_out.csv"
     if not os.path.exists(path):
         return ""
@@ -1202,6 +1202,7 @@ file.""")
 
     return r"""
 \clearpage
+\setcounter{table}{17}
 \subsection*{Leave-one-dataset-out sensitivity}
 
 Each meta-analysis was repeated with every contributing cohort omitted in turn.
