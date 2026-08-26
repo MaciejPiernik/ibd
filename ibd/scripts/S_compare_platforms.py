@@ -73,18 +73,23 @@ def gene_agreement(micro_dir, rna_dir):
 def pathway_agreement(micro_dir, rna_dir):
     micro = pd.read_csv(f'{micro_dir}/pathway_meta_all.csv')[['term', 'combined_nes', 'q_value']]
     rna = pd.read_csv(f'{rna_dir}/pathway_meta_all.csv')[['term', 'combined_nes', 'q_value']]
+    micro_significant = set(pd.read_csv(f'{micro_dir}/pathway_meta_significant.csv')['term'])
+    rna_significant = set(pd.read_csv(f'{rna_dir}/pathway_meta_significant.csv')['term'])
 
     merged = micro.merge(rna, on='term', suffixes=('_micro', '_rna')).dropna()
+    merged['significant_micro'] = merged['term'].isin(micro_significant)
+    merged['significant_rna'] = merged['term'].isin(rna_significant)
     merged['same_direction'] = (
         np.sign(merged['combined_nes_micro']) == np.sign(merged['combined_nes_rna']))
-    hits = merged[merged['q_value_micro'] < 0.05]
+
+    hits = merged[merged['significant_micro']]
 
     return merged, {
         'shared_pathways': len(merged),
         'r_all': merged['combined_nes_micro'].corr(merged['combined_nes_rna']),
         'microarray_significant': len(hits),
         'same_direction': hits['same_direction'].mean(),
-        'replicated': (hits['same_direction'] & (hits['q_value_rna'] < 0.05)).mean(),
+        'replicated': (hits['same_direction'] & hits['significant_rna']).mean(),
     }
 
 

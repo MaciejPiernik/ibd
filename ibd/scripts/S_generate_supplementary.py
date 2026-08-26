@@ -1301,7 +1301,8 @@ def _concordance_section(data_dir):
                 f"{r.pathway_r_all:.2f} & {100 * r.pathway_replicated:.0f}\\% \\\\")
 
     rows = "\n".join([row("Inflamed UC vs controls", "inflamed"),
-                       row("Uninflamed UC vs controls", "uninflamed")])
+                       row("Uninflamed UC vs controls", "uninflamed"),
+                       row("Inflamed vs uninflamed UC", "direct")])
 
     return r"""
 \clearpage
